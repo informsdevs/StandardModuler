@@ -1,10 +1,9 @@
 
 
     import {genericTable} from "https://cdn.statically.io/gh/AStonor/GenericTable/main/js/table.js"
-    import data from "../json/demo-data.json" assert { type: 'json' }
+    import data from "https://cdn.statically.io/gh/AStonor/GenericTable/main/json/demo-data.json" assert { type: 'json' }
 
     data.map(employee => employee.total = employee.challange + employee.academy)
-
 
    genericTable(data)
    .addBootstrapClass("table-dark")
