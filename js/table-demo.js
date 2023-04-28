@@ -1,6 +1,6 @@
 
 
-    import {genericTable} from "./table.js"
+    import {genericTable} from "https://cdn.statically.io/gh/AStonor/GenericTable/main/js/table.js"
     import data from "../json/demo-data.json" assert { type: 'json' }
 
     data.map(employee => employee.total = employee.challange + employee.academy)
