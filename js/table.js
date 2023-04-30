@@ -1,14 +1,15 @@
-export function genericTable(data) {
+export function simpleTable(data) {
 
-  const dataArray = data;
+  let dataArray = data;
+  let el;
   const columns = {};
-  let includeRows = false;
-  let includeClickSortingEvent = false;
   const bootstrapClasses = { "table": ["table"], "thead": [] }
   let sortHierarchy = [];
-  let el;
-  let sortedInDescendingOrder = true;
   let sortedBy = "";
+  let sortedInDescendingOrder = true;
+  let includeRows = false;
+  let includeClickSortingEvent = false;
+
 
   extractColumnsFromDataArray();
 
@@ -17,11 +18,10 @@ export function genericTable(data) {
     return this;
   }
 
-  function addBootstrapClass(bootstrapClass) {
-    bootstrapClasses[bootstrapClass.split('-')[0]].push(bootstrapClass);
+  function addBootstrapClass(element, bootstrapClass) {
+    bootstrapClasses[element].push(bootstrapClass);
     return this;
   }
-
 
   function mount(element) {
     el = element;
@@ -35,6 +35,15 @@ export function genericTable(data) {
 
   function renameColumn(column, name) {
     columns[column] = name;
+    return this;
+  }
+
+  function addColumnsTogether(columnNames, columnName) {
+    dataArray.map(data => {
+      data[columnName] = columnNames
+        .map(name => data[name]).reduce((a, b) => a + b, 0)
+    })
+    columns[columnName] = columnName;
     return this;
   }
 
@@ -61,6 +70,16 @@ export function genericTable(data) {
   function sortInAscendingOrder(sortedBy) {
     sortedInDescendingOrder = false;
     sort(sortedBy);
+    return this;
+  }
+
+  function deleteColumn(column) {
+    delete columns[column];
+    return this;
+  }
+
+  function deleteColumns(columnNames) {
+    columnNames.forEach(column => delete columns[column]);
     return this;
   }
 
@@ -122,10 +141,26 @@ export function genericTable(data) {
     sortInDescendingOrder,
     addClickSortingEvent,
     renameColumn,
-    getDataSnapshot
+    deleteColumn,
+    deleteColumns,
+    getDataSnapshot,
+    addColumnsTogether
   };
 }
 
+export function standardTable(data) {
+  return simpleTable(data)
+    .prettifyColumns()
+    .addClickSortingEvent()
+    .addNumberedRows();
+}
+
+export function standardStylizedTable(data) {
+  return standardTable(data)
+    .addBootstrapClass("thead", "table-dark")
+    .addBootstrapClass("table", "table-striped")
+    .addBootstrapClass("table", "table-hover");
+}
 
 
 
