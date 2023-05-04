@@ -1,13 +1,13 @@
 
 
-import { standardStylizedTable } from "../js/table.js"
+import { simpleTable, defaultTable, defaultStylizedTable } from "../js/table.js"
 
 window.addEventListener("DOMContentLoaded", async () => {
 
     const auth = {
-        url: "https://ws-warehouse.cousab.se/api/leaderboards/v1/adidas-see",
-        user: "workshop",
-        password: "2gUph56Kcb6TeAf"
+        url: "",
+        user: "",
+        password: ""
     }
 
     const response = await fetch(auth.url, {
@@ -16,13 +16,34 @@ window.addEventListener("DOMContentLoaded", async () => {
 
     const data = await response.json();
 
-    const table = standardStylizedTable(data)
-        .addColumnsTogether(["challange", "academy"], "Total")
+    const table = defaultStylizedTable(data)
+        .addColumnsTogether(["academy", "challange"], "Total")
         .renameColumn("challange", "Challenge")
         .sortInDescendingOrder("Total")
-        .mount(document.getElementById("table"));
+        .mount(document.getElementById("table"))
 
     const employees = table.getDataSnapshot();
+
+    function getStats(column) {
+        const count = employees.length;
+        const total = employees.map(employee => employee[column]).reduce((a, b) => a + b, 0);
+        const average = total / count;
+
+        return { count, total, average }
+    }
+
+    function getStatsTemplate(column, stats){
+        return `
+        <h3>${column.toUpperCase()}</h3>
+        <p>Count: ${stats.count}</p>
+        <p>Total: ${stats.total}</p>
+        <p>Average: ${stats.average}</p>
+        `
+    }
+
+    ["academy", "challange", "Total"].forEach(column => {       
+         document.getElementById(column).innerHTML = getStatsTemplate(column, getStats(column))
+    })
 
     const podium = document.getElementsByClassName("podium");
     [podium[1], podium[0], podium[2]].forEach((el, index) => {

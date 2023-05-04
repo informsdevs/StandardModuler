@@ -148,18 +148,17 @@ export function simpleTable(data) {
   };
 }
 
-export function standardTable(data) {
+export function defaultTable(data) {
   return simpleTable(data)
     .prettifyColumns()
     .addClickSortingEvent()
     .addNumberedRows();
 }
 
-export function standardStylizedTable(data) {
-  return standardTable(data)
+export function defaultStylizedTable(data) {
+  return defaultTable(data)
     .addBootstrapClass("thead", "table-dark")
     .addBootstrapClass("table", "table-striped")
-    .addBootstrapClass("table", "table-hover");
 }
 
 
