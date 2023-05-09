@@ -1,26 +1,88 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bootstrap Site</title>
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/5.0.0-alpha1/css/bootstrap.min.css" integrity="sha384-r4NyP46KrjDleawBgD5tp8Y7UzmLA05oM1iAEQ17CSuDqnUK2+k9luXQOfXJCJ4I" crossorigin="anonymous">
-  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
-  <script src="https://stackpath.bootstrapcdn.com/bootstrap/5.0.0-alpha1/js/bootstrap.min.js" integrity="sha384-oesi62hOLfzrys4LxRF63OJCXdXDipiYWBnvTl9Y9/TRlw5xlKIEHpNyvvDShgf/" crossorigin="anonymous"></script>
-   <script src="../js/table-demo.js" type="module" defer></script>
-   <!-- <script src="../js/main.js" type="module"></script> -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bootstrap Site</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/5.0.0-alpha1/css/bootstrap.min.css"
+        integrity="sha384-r4NyP46KrjDleawBgD5tp8Y7UzmLA05oM1iAEQ17CSuDqnUK2+k9luXQOfXJCJ4I" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"
+        integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo"
+        crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/5.0.0-alpha1/js/bootstrap.min.js"
+        integrity="sha384-oesi62hOLfzrys4LxRF63OJCXdXDipiYWBnvTl9Y9/TRlw5xlKIEHpNyvvDShgf/"
+        crossorigin="anonymous"></script>
+    <script src="../js/table-demo.js" type="module" defer></script>
+    <!-- <script src="../js/main.js" type="module"></script> -->
 </head>
+
 <body>
-  <h1 class="display-4 text-center">TOP 3 AMBASSADORS</h1>
+    <h1 class="display-4 text-center">TOP 3 AMBASSADORS</h1>
     <h1 class="display-6 text-center">(so far this quarter)</h1>
 
-    <div class="d-flex flex-row justify-content-around">
-    <h3 id="Total"> </h3>
-
-<h3 id="academy"> </h3>
-
-<h3 id="challange"> </h3>
-</div>
+    <div id="subcontractors2">
+        <table class="followup" id="follow">
+            <tbody>
+                <tr id="headers">
+                    <th id="tid"> </th>
+                    <th id="img" onclick="sortTable(1)">Logo</th>
+                    <th id="name" onclick="sortTable3(1)">Team Name</th>
+                    <th id="1" onclick="sortTable3(2)">Avg Academo</th>
+                    <th id="2" onclick="sortTable3(3)">Avg Challenge</th>
+                    <th id="3" onclick="sortTable3(4)">Avg Points</th>
+                    <th id="5" onclick="sortTable3(5)">Academy</th>
+                    <th id="6" onclick="sortTable3(6)">Challnge</th>
+                    <th id="7y" onclick="sortTable3(8)">Total</th>
+                </tr>
+                <tr id="body">
+                    <td id="tid"><label>#1</label></td>
+                    <td id="init"><label><img src="https://www.elgiganten.dk/resource/blob/41142/f83e285adbebfa2d9036f3d1cc919b2a/elkjop-logo-data.png" /></label></td>
+                    <td id="img">Elgiganten Herlev</td>
+                    <td id="email"><label>0</label></td>
+                    <td id="1"><label>0</label></td>
+                    <td id="2"><label>0</label></td>
+                    <td id="3">0</td>
+                    <td id="4">0</td>
+                    <td id="5">0</td>
+                </tr>
+                <tr id="body">
+                    <td id="tid"><label>#2</label></td>
+                    <td id="init"><label><img src="https://www.elgiganten.dk/resource/blob/41142/f83e285adbebfa2d9036f3d1cc919b2a/elkjop-logo-data.png" /></label></td>
+                    <td id="img">Elgiganten Næstved</td>
+                    <td id="email"><label>0</label></td>
+                    <td id="1"><label>0</label></td>
+                    <td id="2"><label>0</label></td>
+                    <td id="3">0</td>
+                    <td id="4">0</td>
+                    <td id="5">0</td>
+                </tr>
+                <tr id="body">
+                    <td id="tid"><label>#3</label></td>
+                    <td id="init"><label><img src="https://www.elgiganten.dk/resource/blob/41142/f83e285adbebfa2d9036f3d1cc919b2a/elkjop-logo-data.png" /></label></td>
+                    <td id="img">Elgiganten København</td>
+                    <td id="email"><label>0</label></td>
+                    <td id="1"><label>0</label></td>
+                    <td id="2"><label>0</label></td>
+                    <td id="3">0</td>
+                    <td id="4">0</td>
+                    <td id="5">0</td>
+                </tr>
+                <tr id="body">
+                    <td id="tid"><label>#4</label></td>
+                    <td id="init"><label><img src="https://www.elgiganten.dk/resource/blob/41142/f83e285adbebfa2d9036f3d1cc919b2a/elkjop-logo-data.png" /></label></td>
+                    <td id="img">Elgiganten Aarhus</td>
+                    <td id="email"><label>0</label></td>
+                    <td id="1"><label>0</label></td>
+                    <td id="2"><label>0</label></td>
+                    <td id="3">0</td>
+                    <td id="4">0</td>
+                    <td id="5">0</td>
+                </tr>
+            </tbody>
+        </table>
+        </div>
+        
     <div class="m-5 d-flex flex-row justify-content-around">
         <div class="podium d-flex flex-column align-items-center justify-content-end">
             <img src="../resources/rank2medal.png" width="90" height="120">
@@ -40,4 +102,5 @@
     </div>
     <div id="table" class="m-5"></div>
 </body>
+
 </html>

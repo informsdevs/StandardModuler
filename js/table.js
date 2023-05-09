@@ -1,4 +1,4 @@
-export function simpleTable(data) {
+function simpleTable(data) {
 
   let dataArray = data;
   let el;
@@ -148,14 +148,13 @@ export function simpleTable(data) {
   };
 }
 
-export function defaultTable(data) {
+function defaultTable(data) {
   return simpleTable(data)
     .prettifyColumns()
     .addClickSortingEvent()
     .addNumberedRows();
 }
-
-export function defaultStylizedTable(data) {
+function defaultStylizedTable(data) {
   return defaultTable(data)
     .addBootstrapClass("thead", "table-dark")
     .addBootstrapClass("table", "table-striped")

@@ -1,13 +1,13 @@
 
 
-import { simpleTable, defaultTable, defaultStylizedTable } from "../js/table.js"
+import { simpleTable, defaultTable, defaultStylizedTable } from "https://astonor.github.io/GenericTable/js/table.js"
 
 window.addEventListener("DOMContentLoaded", async () => {
 
     const auth = {
-        url: "",
-        user: "",
-        password: ""
+        url: "https://ws-warehouse.cousab.se/api/leaderboards/v1/adidas-see",
+        user: "workshop",
+        password: "2gUph56Kcb6TeAf"
     }
 
     const response = await fetch(auth.url, {
@@ -41,9 +41,9 @@ window.addEventListener("DOMContentLoaded", async () => {
         `
     }
 
-    ["academy", "challange", "Total"].forEach(column => {       
-         document.getElementById(column).innerHTML = getStatsTemplate(column, getStats(column))
-    })
+    // ["academy", "challange", "Total"].forEach(column => {       
+    //      document.getElementById(column).innerHTML = getStatsTemplate(column, getStats(column))
+    // })
 
     const podium = document.getElementsByClassName("podium");
     [podium[1], podium[0], podium[2]].forEach((el, index) => {
@@ -51,3 +51,4 @@ window.addEventListener("DOMContentLoaded", async () => {
         el.querySelector(".name").innerText = employees[index].name;
     })
 });
+
