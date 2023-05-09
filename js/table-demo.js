@@ -5,9 +5,9 @@ import { simpleTable, defaultTable, defaultStylizedTable } from "https://astonor
 window.addEventListener("DOMContentLoaded", async () => {
 
     const auth = {
-        url: "https://ws-warehouse.cousab.se/api/leaderboards/v1/adidas-see",
-        user: "workshop",
-        password: "2gUph56Kcb6TeAf"
+        url: "",
+        user: "",
+        password: ""
     }
 
     const response = await fetch(auth.url, {
