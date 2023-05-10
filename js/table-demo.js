@@ -1,5 +1,4 @@
 
-"use strict";
 window.addEventListener("DOMContentLoaded", async () => {
 
     const response = await fetch("../json/store.json");

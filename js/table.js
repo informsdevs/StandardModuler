@@ -1,5 +1,3 @@
-"use strict";
-
 let globalId = 0;
 
 function simpleTable(data) {
