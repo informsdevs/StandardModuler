@@ -6,7 +6,8 @@ function simpleTable(data) {
   const id = ++globalId;
   let dataArray = data;
   let el;
-  let columns = {};
+  const columns = {};
+  let selectedColumns = {};
   const bootstrapClasses = { "table": ["table"], "thead": [] }
   const singleRecordActionLabels = ["View", "Delete", "Edit", "Send"]
   let sortHierarchy = [];
@@ -43,7 +44,15 @@ function simpleTable(data) {
 
   function renameColumn(column, name) {
     columns[column] = name;
+    selectedColumns[column] = name;
     return this;
+  }
+
+  function selectColumns(columns){
+      Object.keys(selectedColumns).forEach(column => {
+        if(!columns.includes(column)) delete selectedColumns[column]
+      }) 
+      return this;
   }
 
   function addColumnsTogether(columnNames, columnName) {
@@ -52,6 +61,7 @@ function simpleTable(data) {
         .map(name => data[name]).reduce((a, b) => a + b, 0)
     })
     columns[columnName] = columnName;
+    selectedColumns[columnName] = columnName;
     return this;
   }
 
@@ -87,18 +97,20 @@ function simpleTable(data) {
   }
 
   function deleteColumn(column) {
-    delete columns[column];
+    delete selectedColumns[column];
     return this;
   }
 
   function deleteColumns(columnNames) {
-    columnNames.forEach(column => delete columns[column]);
+    columnNames.forEach(column => delete selectedColumns[column]);
     return this;
   }
 
   function extractColumnsFromDataArray() {
-    Object.keys(dataArray[0]).forEach(column =>
+    Object.keys(dataArray[0]).forEach(column => {
       columns[column] = column
+      selectedColumns[column] = column
+    }
     )
   }
 
@@ -109,9 +121,10 @@ function simpleTable(data) {
   }
 
   function prettifyColumns() {
-    Object.keys(columns).forEach(column =>
+    Object.keys(columns).forEach(column => {
       columns[column] = column.split(/[_\s-]+/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
-    )
+      selectedColumns[column] = column.split(/[_\s-]+/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+  })
     return this;
   }
 
@@ -167,7 +180,7 @@ function simpleTable(data) {
           <tr>
             ${includeRows ? "<th scope='col'>#</th>" : ""}
             ${includeSelect ? "<th scope='col'>Select</th>" : ""}
-            ${Object.entries(columns).map(([key, value]) => 
+            ${Object.entries(selectedColumns).map(([key, value]) => 
               `<th scope="col" ${includeClickSortingEvent ? `style='cursor:pointer;' onclick='window.onClickTable${id}Column("${key}");return false;'` : ""}>${value}</th>`
             ).join('')}
             ${includeSingleRecordActions ? `<th scope='col' colspan="${singleRecordActionLabels.length}" class="text-center">Actions</th>` : ""}
@@ -178,7 +191,7 @@ function simpleTable(data) {
             <tr>
               ${includeRows ? `<th scope='row'>${index + 1}</th>` : ""}
               ${includeSelect ? "<th> <input type='checkbox' style='cursor:pointer'/> </th>" : ""}
-              ${Object.keys(columns).map(column => `<td>${data[column] ?? ""}</td>`).join('')}
+              ${Object.keys(selectedColumns).map(column => `<td>${data[column] ?? ""}</td>`).join('')}
               ${includeSingleRecordActions ? 
                 singleRecordActionLabels.map(label =>  
                   `<td><button type="button" class="btn btn-secondary btn-sm" onclick='window.onClickRecordAction(${index}, "${label}");return false;'>${label}</button></td>`
@@ -205,7 +218,8 @@ function simpleTable(data) {
     getDataSnapshot,
     addColumnsTogether,
     addSelectRow,
-    addSingleRecordActions
+    addSingleRecordActions,
+    selectColumns
   };
 }
 

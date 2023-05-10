@@ -2,12 +2,6 @@
 
 window.addEventListener("DOMContentLoaded", async () => {
 
-    const auth = {
-        url: "https://in.informs.dk/api/api.php/records/platformcc6831243_tokens_793524",
-        user: "",
-        password: ""
-    }
-
     const response = await fetch("../json/store.json");
 
     const data = await response.json();
@@ -17,6 +11,7 @@ window.addEventListener("DOMContentLoaded", async () => {
         .renameColumn("challange", "Challenge")
         .sortInDescendingOrder("Total")
         .addSelectRow()
+        .selectColumns(["client", "country", "retailer"])
         .addSingleRecordActions()
         .mount(document.getElementById("table"))
 
