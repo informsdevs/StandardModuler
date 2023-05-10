@@ -4,10 +4,11 @@ let globalId = 0;
 function simpleTable(data) {
 
   const id = ++globalId;
+  const name = "table" + id;
   let dataArray = data;
   let el;
   const columns = {};
-  let selectedColumns = {};
+  const selectedColumns = {};
   const bootstrapClasses = { "table": ["table"], "thead": [] }
   const singleRecordActionLabels = ["View", "Delete", "Edit", "Send"]
   let sortHierarchy = [];
@@ -148,7 +149,7 @@ function simpleTable(data) {
       modal.setAttribute("id", "modal");
       document.body.appendChild(modal);
     }
-    window.onClickRecordAction = onClickRecordAction.bind(this);
+    window[`onClick${name}RecordAction`] = onClickRecordAction.bind(this);
     includeSingleRecordActions = true;
     return this;
   }
@@ -167,7 +168,7 @@ function simpleTable(data) {
         </tbody>
       </table>
       <form method="dialog" class="m-2 float-right">
-        <button class="btn btn-secondary btn-sm" onclick="document.body.style.overflowY = 'visible'">OK</button>
+        <button class="${name} button popup" onclick="document.body.style.overflowY = 'visible'">OK</button>
       </form>
     `;
   }
@@ -175,8 +176,8 @@ function simpleTable(data) {
 
   function getBootstrapTableHtml() {
     return `
-      <table class="${bootstrapClasses.table.join(' ')}">
-        <thead class="${bootstrapClasses.thead.join(' ')}">
+      <table class="${name} table">
+        <thead class="${name} tableHead">
           <tr>
             ${includeRows ? "<th scope='col'>#</th>" : ""}
             ${includeSelect ? "<th scope='col'>Select</th>" : ""}
@@ -194,7 +195,7 @@ function simpleTable(data) {
               ${Object.keys(selectedColumns).map(column => `<td>${data[column] ?? ""}</td>`).join('')}
               ${includeSingleRecordActions ? 
                 singleRecordActionLabels.map(label =>  
-                  `<td><button type="button" class="btn btn-secondary btn-sm" onclick='window.onClickRecordAction(${index}, "${label}");return false;'>${label}</button></td>`
+                  `<td><button type="button" class="${name} button action ${label.toLowerCase()}" onclick='window.onClick${name}RecordAction(${index}, "${label}");return false;'>${label}</button></td>`
                 ).join('') : ""}
             </tr>
           `).join('')}
