@@ -11,11 +11,11 @@ window.addEventListener("DOMContentLoaded", async () => {
         .renameColumn("challange", "Challenge")
         .sortInDescendingOrder("Total")
         .addSelectRow()
-        .selectColumns(["client", "country", "retailer"])
+        .selectColumns("client", "country", "retailer")
         .addSingleRecordActions()
         .mount(document.getElementById("table"))
 
-        const table2 = defaultStylizedTable(data)
+        const table2 = defaultTable(data)
         .addColumnsTogether(["academy", "challange"], "Total")
         .renameColumn("challange", "Challenge")
         .sortInDescendingOrder("Total")

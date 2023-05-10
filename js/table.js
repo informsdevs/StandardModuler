@@ -7,9 +7,9 @@ function simpleTable(data) {
   const name = "table" + id;
   let dataArray = data;
   let el;
+  const postRenderingActions = [];
   const columns = {};
   const selectedColumns = {};
-  const bootstrapClasses = { "table": ["table"], "thead": [] }
   const singleRecordActionLabels = ["View", "Delete", "Edit", "Send"]
   let sortHierarchy = [];
   let sortedBy = "";
@@ -28,14 +28,17 @@ function simpleTable(data) {
     return this;
   }
 
-  function addBootstrapClass(element, bootstrapClass) {
-    bootstrapClasses[element].push(bootstrapClass);
+  function addCssClass(querySelector, className) {
+    postRenderingActions.push(() => {
+      console.log(`.${name + querySelector}`)
+      document.querySelectorAll(`.${name + querySelector}`).forEach(element => element.classList.add(...className.split(" ")))
+    })
     return this;
   }
 
   function mount(element) {
     el = element;
-    el.innerHTML = getBootstrapTableHtml();
+    update();
     return this;
   }
 
@@ -49,11 +52,11 @@ function simpleTable(data) {
     return this;
   }
 
-  function selectColumns(columns){
-      Object.keys(selectedColumns).forEach(column => {
-        if(!columns.includes(column)) delete selectedColumns[column]
-      }) 
-      return this;
+  function selectColumns(...columns) {
+    Object.keys(selectedColumns).forEach(column => {
+      if (!columns.includes(column)) delete selectedColumns[column]
+    })
+    return this;
   }
 
   function addColumnsTogether(columnNames, columnName) {
@@ -66,7 +69,7 @@ function simpleTable(data) {
     return this;
   }
 
-  function addSelectRow(){
+  function addSelectRow() {
     includeSelect = true;
     return this;
   }
@@ -102,7 +105,7 @@ function simpleTable(data) {
     return this;
   }
 
-  function deleteColumns(columnNames) {
+  function deleteColumns(...columnNames) {
     columnNames.forEach(column => delete selectedColumns[column]);
     return this;
   }
@@ -125,65 +128,69 @@ function simpleTable(data) {
     Object.keys(columns).forEach(column => {
       columns[column] = column.split(/[_\s-]+/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
       selectedColumns[column] = column.split(/[_\s-]+/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
-  })
+    })
     return this;
+  }
+
+  function update() {
+    el.innerHTML = getBootstrapTableHtml();
+    postRenderingActions.forEach(action => action())
   }
 
   function onClickColumn(column) {
     sortedInDescendingOrder = !sortedInDescendingOrder;
     sortedBy = column;
     sort(sortedBy);
-    el.innerHTML = getBootstrapTableHtml();
+    update();
   }
 
-  function onClickRecordAction(index, action){
-     const modal = document.getElementById("modal");
-     modal.innerHTML = getDialogHtml(dataArray[index]);
-     document.body.style.overflowY = "hidden";
-     modal.showModal();
+  function onClickRecordAction(index, action) {
+    document.querySelector(`.${name}.popupTable`).innerHTML = `
+      ${Object.entries(columns).map(([key, value]) => `
+        <tr>
+          <td>${value}</td>
+          <td>${dataArray[index][key]}</td>
+        </tr>
+      `).join('')}
+    `;
+    document.body.style.overflowY = "hidden";
+    document.getElementById(`${name}modal`).showModal();
   }
+  
 
-  function addSingleRecordActions(){
-    if(!document.getElementById("modal")) {
-      const modal = document.createElement("dialog")
-      modal.setAttribute("id", "modal");
-      document.body.appendChild(modal);
-    }
+  function addSingleRecordActions() {
     window[`onClick${name}RecordAction`] = onClickRecordAction.bind(this);
     includeSingleRecordActions = true;
     return this;
   }
 
-  function getDialogHtml(record) {
+  function getDialogHtml() {
     return `
-      <h3>Detailed record</h3>
-      <table class="table">
-        <tbody>
-          ${Object.entries(columns).map(([key, value]) => `
-            <tr>
-              <td>${value}</td>
-              <td>${record[key]}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-      <form method="dialog" class="m-2 float-right">
-        <button class="${name} button popup" onclick="document.body.style.overflowY = 'visible'">OK</button>
-      </form>
+      <dialog id="${name}modal">
+        <h3>Detailed record</h3>
+        <table class="table popup">
+          <tbody class="${name} popupTable">
+          </tbody>
+        </table>
+        <form method="dialog" class="m-2 float-right">
+          <button class="${name} button popup" onclick="document.body.style.overflowY = 'visible'">OK</button>
+        </form>
+      </dialog>
     `;
   }
 
 
   function getBootstrapTableHtml() {
     return `
+    ${includeSingleRecordActions ? getDialogHtml() : ""}
       <table class="${name} table">
         <thead class="${name} tableHead">
           <tr>
             ${includeRows ? "<th scope='col'>#</th>" : ""}
             ${includeSelect ? "<th scope='col'>Select</th>" : ""}
-            ${Object.entries(selectedColumns).map(([key, value]) => 
-              `<th scope="col" ${includeClickSortingEvent ? `style='cursor:pointer;' onclick='window.onClickTable${id}Column("${key}");return false;'` : ""}>${value}</th>`
-            ).join('')}
+            ${Object.entries(selectedColumns).map(([key, value]) =>
+      `<th scope="col" ${includeClickSortingEvent ? `style='cursor:pointer;' onclick='window.onClickTable${id}Column("${key}");return false;'` : ""}>${value}</th>`
+    ).join('')}
             ${includeSingleRecordActions ? `<th scope='col' colspan="${singleRecordActionLabels.length}" class="text-center">Actions</th>` : ""}
           </tr>
         </thead>
@@ -193,23 +200,23 @@ function simpleTable(data) {
               ${includeRows ? `<th scope='row'>${index + 1}</th>` : ""}
               ${includeSelect ? "<th> <input type='checkbox' style='cursor:pointer'/> </th>" : ""}
               ${Object.keys(selectedColumns).map(column => `<td>${data[column] ?? ""}</td>`).join('')}
-              ${includeSingleRecordActions ? 
-                singleRecordActionLabels.map(label =>  
-                  `<td><button type="button" class="${name} button action ${label.toLowerCase()}" onclick='window.onClick${name}RecordAction(${index}, "${label}");return false;'>${label}</button></td>`
-                ).join('') : ""}
+              ${includeSingleRecordActions ?
+        singleRecordActionLabels.map(label =>
+          `<td><button type="button" class="${name} button action ${label.toLowerCase()}" onclick='window.onClick${name}RecordAction(${index}, "${label}");return false;'>${label}</button></td>`
+        ).join('') : ""}
             </tr>
           `).join('')}
         </tbody>
       </table>
     `;
   }
-  
+
 
   return {
     prettifyColumns,
     addNumberedRows,
     mount,
-    addBootstrapClass,
+    addCssClass,
     sortInAscendingOrder,
     sortInDescendingOrder,
     addClickSortingEvent,
@@ -230,11 +237,13 @@ function defaultTable(data) {
     .addClickSortingEvent()
     .addNumberedRows();
 }
+
 function defaultStylizedTable(data) {
   return defaultTable(data)
-    .addBootstrapClass("thead", "table-dark")
-    .addBootstrapClass("table", "table-striped")
+    .addCssClass(".tableHead", "table-dark")
+    .addCssClass(".button", "btn btn-secondary btn-sm")
 }
+
 
 
 
