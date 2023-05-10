@@ -1,3 +1,4 @@
+"use strict";
 
 let globalId = 0;
 
@@ -156,10 +157,16 @@ function simpleTable(data) {
     document.body.style.overflowY = "hidden";
     document.getElementById(`${name}modal`).showModal();
   }
+
+  function onCloseRecordAction(){
+    document.body.style.overflowY = "visible";
+    document.getElementById(`${name}modal`).close();
+  }
   
 
   function addSingleRecordActions() {
     window[`onClick${name}RecordAction`] = onClickRecordAction.bind(this);
+    window[`onClose${name}RecordAction`] = onCloseRecordAction.bind(this);
     includeSingleRecordActions = true;
     return this;
   }
@@ -171,10 +178,8 @@ function simpleTable(data) {
         <table class="table popup">
           <tbody class="${name} popupTable">
           </tbody>
-        </table>
-        <form method="dialog" class="m-2 float-right">
-          <button class="${name} button popup" onclick="document.body.style.overflowY = 'visible'">OK</button>
-        </form>
+          </table>
+          <button class="${name} button popup m-2 float-right" onclick="window.onClose${name}RecordAction()">OK</button> 
       </dialog>
     `;
   }
@@ -241,7 +246,8 @@ function defaultTable(data) {
 function defaultStylizedTable(data) {
   return defaultTable(data)
     .addCssClass(".tableHead", "table-dark")
-    .addCssClass(".button", "btn btn-secondary btn-sm")
+    .addCssClass(".popup.button", "btn btn-secondary btn-sm")
+    .addCssClass(".action.button", "btn btn-primary btn-sm")
 }
 
 

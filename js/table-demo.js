@@ -1,10 +1,12 @@
 
-
+"use strict";
 window.addEventListener("DOMContentLoaded", async () => {
 
     const response = await fetch("../json/store.json");
 
     const data = await response.json();
+
+    console.log(data);
 
     const table = defaultStylizedTable(data)
         .addColumnsTogether(["academy", "challange"], "Total")
