@@ -1,10 +1,9 @@
 let globalId = 0;
 
-function simpleTable(data) {
+function simpleTable(apiClient) {
 
   const id = ++globalId;
   const name = "table" + id;
-  let dataArray = data;
   let el;
   const postRenderingActions = [];
   const columns = {};
@@ -18,8 +17,9 @@ function simpleTable(data) {
   let includeSelect = false;
   let includeTableActions = false;
   let includeSingleRecordActions = false;
+  let currSelectedRecord;
 
-
+  let dataArray = apiClient.getAllRecords();
   extractColumnsFromDataArray();
 
   function addNumberedRows() {
@@ -136,6 +136,12 @@ function simpleTable(data) {
     postRenderingActions.forEach(action => action())
   }
 
+  function reload(){
+    dataArray = apiClient.getAllRecords();
+    sort(sortedBy);
+    update();
+  }
+
   function onClickColumn(column) {
     sortedInDescendingOrder = !sortedInDescendingOrder;
     sortedBy = column;
@@ -143,49 +149,73 @@ function simpleTable(data) {
     update();
   }
 
-  function onClickRecordAction(index, action) {
+  function viewRecord() {
     document.querySelector(`.${name}.popupTable`).innerHTML = `
       ${Object.entries(columns).map(([key, value]) => `
         <tr>
           <td>${value}</td>
-          <td>${dataArray[index][key]}</td>
+          <td>${dataArray[currSelectedRecord][key]}</td>
         </tr>
       `).join('')}
     `;
-    document.body.style.overflowY = "hidden";
-    document.getElementById(`${name}modal`).showModal();
   }
 
-  function onCloseRecordAction(){
+  function onClickRecordAction(index, action){
+      currSelectedRecord = index;
+      if(action === "view") viewRecord();
+      document.body.style.overflowY = "hidden";
+      document.getElementById(`${name}-${action}-modal`).showModal();
+  }
+
+  function deleteRecord(){
+      if(apiClient.deleteRecord(dataArray[currSelectedRecord])){
+        reload();
+      }    
+  }
+
+  function onCloseRecordAction(action, confirmed){
     document.body.style.overflowY = "visible";
-    document.getElementById(`${name}modal`).close();
+    document.getElementById(`${name}-${action}-modal`).close();
   }
   
 
   function addSingleRecordActions() {
     window[`onClick${name}RecordAction`] = onClickRecordAction.bind(this);
     window[`onClose${name}RecordAction`] = onCloseRecordAction.bind(this);
+    window[`onDelete${name}RecordAction`] = deleteRecord.bind(this);
     includeSingleRecordActions = true;
     return this;
   }
 
-  function getDialogHtml() {
+  function getViewDialogHtml() {
     return `
-      <dialog id="${name}modal">
+    <dialog id="${name}-view-modal">
         <h3>Detailed record</h3>
         <table class="table popup">
-          <tbody class="${name} popupTable">
+          <tbody class="${name} popupTable"> 
           </tbody>
           </table>
-          <button class="${name} button popup m-2 float-right" onclick="window.onClose${name}RecordAction()">OK</button> 
-      </dialog>
-    `;
+        <button class="${name} button popup m-2 float-right" onclick="window.onClose${name}RecordAction('view')">OK</button> 
+    </dialog>
+        `;
+  }
+
+  function getDeleteDialogHtml(){
+    return `
+    <dialog id="${name}-delete-modal">
+    <p>Are you sure that you want to delete this record?</p>
+    <div class="d-flex flex-row justify-content-center">
+    <button class="m-3" onclick="onDelete${name}RecordAction(); window.onClose${name}RecordAction('delete');">Yes</button>
+    <button class="m-3" onclick="window.onClose${name}RecordAction('delete')">No</button>
+    </div>    
+   </dialog>
+    `
   }
 
 
   function getBootstrapTableHtml() {
     return `
-    ${includeSingleRecordActions ? getDialogHtml() : ""}
+    ${includeSingleRecordActions ? getViewDialogHtml() + getDeleteDialogHtml(): ""}
       <table class="${name} table">
         <thead class="${name} tableHead">
           <tr>
@@ -205,7 +235,7 @@ function simpleTable(data) {
               ${Object.keys(selectedColumns).map(column => `<td>${data[column] ?? ""}</td>`).join('')}
               ${includeSingleRecordActions ?
         singleRecordActionLabels.map(label =>
-          `<td><button type="button" class="${name} button action ${label.toLowerCase()}" onclick='window.onClick${name}RecordAction(${index}, "${label}");return false;'>${label}</button></td>`
+          `<td><button type="button" class="${name} button action ${label.toLowerCase()}" onclick='window.onClick${name}RecordAction(${index}, "${label.toLowerCase()}");return false;'>${label}</button></td>`
         ).join('') : ""}
             </tr>
           `).join('')}

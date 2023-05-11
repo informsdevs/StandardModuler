@@ -1,24 +1,23 @@
 
 window.addEventListener("DOMContentLoaded", async () => {
 
-    const response = await fetch("../json/store.json");
+   
 
-    const data = await response.json();
+    const apiClient  = mockApiClient();
 
-    console.log(data);
-
-    const table = defaultStylizedTable(data)
-        .addColumnsTogether(["academy", "challange"], "Total")
-        .renameColumn("challange", "Challenge")
+  
+    const table = defaultStylizedTable(apiClient)
+        .addColumnsTogether(["academy", "challenge"], "Total")
         .sortInDescendingOrder("Total")
         .addSelectRow()
-        .selectColumns("client", "country", "retailer")
+        .selectColumns("name", "challenge", "academy", "Total")
         .addSingleRecordActions()
         .mount(document.getElementById("table"))
 
-        const table2 = defaultTable(data)
-        .addColumnsTogether(["academy", "challange"], "Total")
-        .renameColumn("challange", "Challenge")
+    const apiClient2 = mockApiClient();
+
+        const table2 = defaultTable(apiClient2)
+        .addColumnsTogether(["academy", "challenge"], "Total")
         .sortInDescendingOrder("Total")
         .addSelectRow()
         .addSingleRecordActions()
