@@ -151,31 +151,21 @@ function simpleTable(apiClient) {
     update();
   }
 
-  function updateViewModal(index) {
-    el.querySelector(`.popupTable.view`).innerHTML = `
-      ${Object.entries(columns).map(([key, value]) => `
-        <tr>
-          <td>${value}</td>
-          <td>${dataArray[index][key]}</td>
-        </tr>
-      `).join('')}
-    `;
-  }
+  function addSingleRecordActions() {
+    postRenderingActions.push(() => {
+     dialogManager(this).dialogs.forEach(dialog => {
+       dialog.addCloseEvent(dialog.buttons);
+       dialog.addAcceptEvent(dialog.buttons);
+       el.querySelectorAll(`.${dialog.type}.action.button`).forEach((btn, index) => {
+         btn.addEventListener('click', dialog.update.bind(this, index))
+         btn.addEventListener('click', dialog.show.bind(this))
+       })
+     })
+   })
 
-  function updateEditModal(index) {
-    el.querySelector(`.popupTable.edit`).innerHTML = `
-    ${Object.entries(columns).map(([key, value]) => `
-      <tr>
-        <td>${value}</td>
-        <td><input type="text" value="${dataArray[index][key]}"/></td>
-      </tr>
-    `).join('')}
-  `;
-
-  }
-
-
-
+   includeSingleRecordActions = true;
+   return this;
+ }
 
   function dialogManager(cntx) {
 
@@ -298,42 +288,7 @@ function simpleTable(apiClient) {
     }
   }
 
-  function updateDeleteModal(index) {
-    deleteModal = document.querySelector(`#${name}-delete-modal`);
-    deleteModal.parentNode.replaceChild(deleteModal.cloneNode(true), deleteModal);
-    document.querySelector(`#${name}-delete-modal .reject`).addEventListener('click', closeSingleRecordActionModal.bind(this, "delete"), { once: true })
-    document.querySelector(`#${name}-delete-modal .accept`).addEventListener('click', deleteRecord.bind(this, index))
-    document.querySelector(`#${name}-delete-modal .accept`).addEventListener('click', closeSingleRecordActionModal.bind(this, "delete"), { once: true })
-  }
 
-
-
-  function closeSingleRecordActionModal(action) {
-    document.body.style.overflowY = "visible";
-    document.getElementById(`${name}-${action}-modal`).close();
-  }
-
-
-  function addSingleRecordActions() {
-    /*   postRenderingActions.push(() => {
-      
-        el.querySelector(`#${name}-view-modal > button`).addEventListener('click', closeSingleRecordActionModal.bind(this, "view"))
-     
- */
-    postRenderingActions.push(() => {
-      dialogManager(this).dialogs.forEach(dialog => {
-        dialog.addCloseEvent(dialog.buttons);
-        dialog.addAcceptEvent(dialog.buttons);
-        el.querySelectorAll(`.${dialog.type}.action.button`).forEach((btn, index) => {
-          btn.addEventListener('click', dialog.update.bind(this, index))
-          btn.addEventListener('click', dialog.show.bind(this))
-        })
-      })
-    })
-
-    includeSingleRecordActions = true;
-    return this;
-  }
 
 
 
