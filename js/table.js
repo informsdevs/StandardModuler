@@ -29,8 +29,7 @@ function simpleTable(apiClient) {
 
   function addCssClass(querySelector, className) {
     postRenderingActions.push(() => {
-      console.log(`.${name + querySelector}`)
-      document.querySelectorAll(`.${name + querySelector}`).forEach(element => element.classList.add(...className.split(" ")))
+      el.querySelectorAll(`${querySelector}`).forEach(element => element.classList.add(...className.split(" ")))
     })
     return this;
   }
@@ -118,8 +117,11 @@ function simpleTable(apiClient) {
   }
 
   function addClickSortingEvent() {
-    window[`onClickTable${id}Column`] = onClickColumn.bind(this);
     includeClickSortingEvent = true;
+    postRenderingActions.push(() => Object.keys(selectedColumns).forEach((key, index) => {
+      el.getElementsByClassName('column')[index].addEventListener('click', onClickColumn.bind(this, key))
+    }
+    ))
     return this;
   }
 
@@ -136,7 +138,7 @@ function simpleTable(apiClient) {
     postRenderingActions.forEach(action => action())
   }
 
-  function reload(){
+  function reload() {
     dataArray = apiClient.getAllRecords();
     sort(sortedBy);
     update();
@@ -149,80 +151,203 @@ function simpleTable(apiClient) {
     update();
   }
 
-  function viewRecord() {
-    document.querySelector(`.${name}.popupTable`).innerHTML = `
+  function updateViewModal(index) {
+    el.querySelector(`.popupTable.view`).innerHTML = `
       ${Object.entries(columns).map(([key, value]) => `
         <tr>
           <td>${value}</td>
-          <td>${dataArray[currSelectedRecord][key]}</td>
+          <td>${dataArray[index][key]}</td>
         </tr>
       `).join('')}
     `;
   }
 
-  function onClickRecordAction(index, action){
-      currSelectedRecord = index;
-      if(action === "view") viewRecord();
+  function updateEditModal(index) {
+    el.querySelector(`.popupTable.edit`).innerHTML = `
+    ${Object.entries(columns).map(([key, value]) => `
+      <tr>
+        <td>${value}</td>
+        <td><input type="text" value="${dataArray[index][key]}"/></td>
+      </tr>
+    `).join('')}
+  `;
+
+  }
+
+
+
+
+  function dialogManager(cntx) {
+
+    const context = cntx;
+    let currentRecordIndex;
+
+    const dialogs = [
+      {
+        type: "delete",
+        html: () => getDeleteDialogHtml(),
+        update: (index) => {currentRecordIndex = index},
+        show: () => showDialog("delete"),
+        buttons: {
+          accept: () => document.querySelector(`#${name}-delete-modal .accept`),
+          reject: () => document.querySelector(`#${name}-delete-modal .reject`)
+        },
+        addCloseEvent: (buttons) => addCloseDialogEvents("delete", buttons.accept(), buttons.reject()),
+        addAcceptEvent: (buttons) => addAcceptEvent(buttons.accept(), deleteRecord) 
+      },
+      {
+        type: "view",
+        html: () => getRecordDialogHtml("view", "Detailed Record", "Ok"),
+        update: (index) => updateDialogTable("view", index),
+        show: () => showDialog("view"),      
+        buttons: {
+          accept: () => document.querySelector(`#${name}-view-modal .Ok`)
+        },
+        addCloseEvent: (buttons) => addCloseDialogEvents("view", buttons.accept()),
+        addAcceptEvent: () => {}
+      },
+      {
+        type: "edit",
+        html: () => getRecordDialogHtml("edit", "Edit record", "Save", "Discard"),
+        update: (index) => updateDialogTable("edit", index),
+        show: () => showDialog("edit"),
+        buttons: {
+          accept: () => document.querySelector(`#${name}-edit-modal .Save`),
+          reject: () => document.querySelector(`#${name}-edit-modal .Discard`)
+        },
+        addCloseEvent: (buttons) => addCloseDialogEvents("edit", buttons.accept(), buttons.reject()),
+        addAcceptEvent: () => {},
+      
+      }
+    ]
+
+    function getButtonHtml(btnLabel) {
+      return `${btnLabel ? `<button class="${name} ${btnLabel} button popup m-2 float-right">${btnLabel}</button>` : ""}`
+    }
+
+    function addCloseDialogEvents(type, ...buttons) {
+      buttons.forEach(btn => btn.addEventListener('click', closeDialog.bind(cntx, type)))
+    }
+
+    function addAcceptEvent(button, callback){
+       button.addEventListener('click', callback.bind(cntx))
+    }
+
+    function showDialog(action) {
       document.body.style.overflowY = "hidden";
       document.getElementById(`${name}-${action}-modal`).showModal();
-  }
+    }
 
-  function deleteRecord(){
-      if(apiClient.deleteRecord(dataArray[currSelectedRecord])){
+    function closeDialog(action) {
+      document.body.style.overflowY = "visible";
+      document.getElementById(`${name}-${action}-modal`).close();
+    }
+
+    function getAllDialogsHtml() {
+      return dialogs.map(dialog => dialog.html()).join(' ');
+    }
+
+    function deleteRecord() {
+      if (apiClient.deleteRecord(dataArray[currentRecordIndex])) {
         reload();
-      }    
+      }
+    }
+
+    function getRecordDialogHtml(type, title, accept, reject) {
+      return `
+        <dialog id="${name}-${type}-modal">
+          <h3>${title}</h3>
+          <table class="table popup">
+            <tbody class="${name} ${type} dialogTable"> 
+            </tbody>
+          </table>
+          ${getButtonHtml(accept)}
+          ${getButtonHtml(reject)}
+        </dialog>
+      `;
+    }
+
+    function getDeleteDialogHtml() {
+      return `
+        <dialog id="${name}-delete-modal">
+          <p>Are you sure that you want to delete this record?</p>
+          <div class="d-flex flex-row justify-content-center">
+            <button class="accept m-3">Yes</button>
+            <button class="reject m-3">No</button>
+          </div>    
+        </dialog>
+      `;
+    }
+
+    function updateDialogTable(action, index) {
+      currentRecordIndex = index;
+      el.querySelector(`.dialogTable.${action}`).innerHTML = `
+      ${Object.entries(columns).map(([key, value]) => `
+        <tr>
+          <td>${value}</td>
+          <td>${action === "edit" ? `<input type="text" value="${dataArray[index][key]}"/>` : dataArray[index][key]} </td>
+        </tr>
+      `).join('')}
+    `;
+
+    }
+
+    return {
+      dialogs,
+      getAllDialogsHtml
+    }
   }
 
-  function onCloseRecordAction(action, confirmed){
+  function updateDeleteModal(index) {
+    deleteModal = document.querySelector(`#${name}-delete-modal`);
+    deleteModal.parentNode.replaceChild(deleteModal.cloneNode(true), deleteModal);
+    document.querySelector(`#${name}-delete-modal .reject`).addEventListener('click', closeSingleRecordActionModal.bind(this, "delete"), { once: true })
+    document.querySelector(`#${name}-delete-modal .accept`).addEventListener('click', deleteRecord.bind(this, index))
+    document.querySelector(`#${name}-delete-modal .accept`).addEventListener('click', closeSingleRecordActionModal.bind(this, "delete"), { once: true })
+  }
+
+
+
+  function closeSingleRecordActionModal(action) {
     document.body.style.overflowY = "visible";
     document.getElementById(`${name}-${action}-modal`).close();
   }
-  
+
 
   function addSingleRecordActions() {
-    window[`onClick${name}RecordAction`] = onClickRecordAction.bind(this);
-    window[`onClose${name}RecordAction`] = onCloseRecordAction.bind(this);
-    window[`onDelete${name}RecordAction`] = deleteRecord.bind(this);
+    /*   postRenderingActions.push(() => {
+      
+        el.querySelector(`#${name}-view-modal > button`).addEventListener('click', closeSingleRecordActionModal.bind(this, "view"))
+     
+ */
+    postRenderingActions.push(() => {
+      dialogManager(this).dialogs.forEach(dialog => {
+        dialog.addCloseEvent(dialog.buttons);
+        dialog.addAcceptEvent(dialog.buttons);
+        el.querySelectorAll(`.${dialog.type}.action.button`).forEach((btn, index) => {
+          btn.addEventListener('click', dialog.update.bind(this, index))
+          btn.addEventListener('click', dialog.show.bind(this))
+        })
+      })
+    })
+
     includeSingleRecordActions = true;
     return this;
   }
 
-  function getViewDialogHtml() {
-    return `
-    <dialog id="${name}-view-modal">
-        <h3>Detailed record</h3>
-        <table class="table popup">
-          <tbody class="${name} popupTable"> 
-          </tbody>
-          </table>
-        <button class="${name} button popup m-2 float-right" onclick="window.onClose${name}RecordAction('view')">OK</button> 
-    </dialog>
-        `;
-  }
 
-  function getDeleteDialogHtml(){
-    return `
-    <dialog id="${name}-delete-modal">
-    <p>Are you sure that you want to delete this record?</p>
-    <div class="d-flex flex-row justify-content-center">
-    <button class="m-3" onclick="onDelete${name}RecordAction(); window.onClose${name}RecordAction('delete');">Yes</button>
-    <button class="m-3" onclick="window.onClose${name}RecordAction('delete')">No</button>
-    </div>    
-   </dialog>
-    `
-  }
 
 
   function getBootstrapTableHtml() {
     return `
-    ${includeSingleRecordActions ? getViewDialogHtml() + getDeleteDialogHtml(): ""}
+    ${includeSingleRecordActions ? dialogManager().getAllDialogsHtml() : ""}
       <table class="${name} table">
         <thead class="${name} tableHead">
           <tr>
             ${includeRows ? "<th scope='col'>#</th>" : ""}
             ${includeSelect ? "<th scope='col'>Select</th>" : ""}
-            ${Object.entries(selectedColumns).map(([key, value]) =>
-      `<th scope="col" ${includeClickSortingEvent ? `style='cursor:pointer;' onclick='window.onClickTable${id}Column("${key}");return false;'` : ""}>${value}</th>`
+            ${Object.values(selectedColumns).map((value) =>
+      `<th class="column" scope="col" ${includeClickSortingEvent ? "style='cursor:pointer;'" : ""}>${value}</th>`
     ).join('')}
             ${includeSingleRecordActions ? `<th scope='col' colspan="${singleRecordActionLabels.length}" class="text-center">Actions</th>` : ""}
           </tr>
@@ -235,7 +360,7 @@ function simpleTable(apiClient) {
               ${Object.keys(selectedColumns).map(column => `<td>${data[column] ?? ""}</td>`).join('')}
               ${includeSingleRecordActions ?
         singleRecordActionLabels.map(label =>
-          `<td><button type="button" class="${name} button action ${label.toLowerCase()}" onclick='window.onClick${name}RecordAction(${index}, "${label.toLowerCase()}");return false;'>${label}</button></td>`
+          `<td><button type="button" class="${name} button action ${label.toLowerCase()}">${label}</button></td>`
         ).join('') : ""}
             </tr>
           `).join('')}
