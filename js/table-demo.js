@@ -12,7 +12,7 @@ window.addEventListener("DOMContentLoaded", async () => {
         .addSelectRow()
         .selectColumns("name", "challenge", "academy", "Total")
         .addSingleRecordActions()
-        .mount(document.getElementById("table"))
+        .mount(document.getElementById("stonorable"))
 
     const apiClient2 = mockApiClient();
 
@@ -21,7 +21,7 @@ window.addEventListener("DOMContentLoaded", async () => {
         .sortInDescendingOrder("Total")
         .addSelectRow()
         .addSingleRecordActions()
-        .mount(document.getElementById("table2"))
+        .mount(document.getElementById("stonortable2"))
 
 });
 
