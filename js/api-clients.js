@@ -64,16 +64,37 @@ function mockApiClient(){
     }
 
     function deleteRecord(record){
-        console.log(record);
-
         data = data.filter(employee => employee.Employee_ID != record.Employee_ID);
         return true;
+    }
+
+    function deleteRecords(records){
+        records.forEach(record => deleteRecord(record));
+        return true;
+    }
+
+    function editRecord(record){
+        const index = data.findIndex((el) => el.Employee_ID === record.Employee_ID);
+        data[index] = record;
+        return true;
+    }
+
+    function editRecords(records){
+        records.forEach(record => {
+            editRecord(record)        
+        });
+
+        return true;
+
     }
 
 
     return {
         getAllRecords,
-        deleteRecord
+        deleteRecord,
+        deleteRecords,
+        editRecord,
+        editRecords
     }
 
     

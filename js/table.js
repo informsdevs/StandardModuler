@@ -1,43 +1,130 @@
 let globalId = 0;
-
 function simpleTable(apiClient) {
 
-  const id = ++globalId;
-  const name = "table" + id;
+  const name = "table" + ++globalId;
   let el;
-  const postRenderingActions = [];
-  const columns = {};
-  const selectedColumns = {};
-  const singleRecordActionLabels = ["View", "Delete", "Edit", "Send"]
-  let sortHierarchy = [];
-  let sortedBy = "";
-  let sortedInDescendingOrder = true;
-  let includeRows = false;
-  let includeClickSortingEvent = false;
-  let includeSelect = false;
-  let includeTableActions = false;
-  let includeSingleRecordActions = false;
-  let currSelectedRecord;
+
+  const pipeline = {
+    mount: [],
+    preRender: [],
+    postRender: []
+  }
+
+  const config = {
+    sortHierarchy: [],
+    sortedBy: "",
+    sortedInDescendingOrder: true,
+    includeRows: false,
+    includeClickSortingEvent: false,
+    includeBatchActions: false,
+    includeSingleRecordActions: false
+  }
+
+  const labels = {
+    record: [{ key: "view", name: "View" }, { key: "delete", name: "Delete" }, { key: "edit", name: "Edit" }, { key: "send", name: "Send" }],
+    table: [{ key: "add", name: "Add record" }, { key: "batchDelete", name: "Delete" }, { key: "batchEdit", name: "Batch edit" }, { key: "batchSend", name: "Send" }, { key: "upload", name: "Upload" }, { key: "export", name: "Export" }]
+  }
+
+  const uuids = { columns: {}, rows: [], btns: {} }
+  const columns = [];
+
+  let dialogHandler;
 
   let dataArray = apiClient.getAllRecords();
+
   extractColumnsFromDataArray();
 
+  pipeline.mount.push(generateColumnIds);
+
+  pipeline.mount.push(() => {
+    if (config.includeBatchActions || config.includeSingleRecordActions)
+      dialogHandler = dialogManager();
+  })
+
+  pipeline.preRender.push(() => uuids.rows = dataArray.map(() => ({ record: {} })))
+
+  pipeline.postRender.push(() => {
+    if (config.includeBatchActions || config.includeSingleRecordActions)
+      dialogHandler.addAcceptBtnListener()
+  });
+
+  function $el(id) {
+    return document.getElementById(id);
+  }
+
+  function $col(columnName) {
+    return columns.find(column => column.key === columnName);
+  }
+
+  function $id() {
+    return `generictableid-${uuid.v4()}`
+  }
+
+  function $renderedCols() {
+    return columns.filter(column => column.displayed);
+  }
+
   function addNumberedRows() {
-    includeRows = true;
+    config.includeRows = true;
     return this;
   }
 
   function addCssClass(querySelector, className) {
-    postRenderingActions.push(() => {
+    pipeline.postRender.push(() => {
       el.querySelectorAll(`${querySelector}`).forEach(element => element.classList.add(...className.split(" ")))
     })
     return this;
   }
 
+  function addCssClassToDialog(querySelector, className) {
+    dialogHandler.addCss(querySelector, className);
+    return this;
+  }
+
+  function generateColumnIds() {
+    uuids.columns = $renderedCols().reduce((result, column) => {
+      result[column.key] = $id(); return result;
+    }, {})
+  }
+
+  function generateRowBtnIds() {
+    uuids.rows.forEach(row => {
+      labels.record.forEach(({ key }) => {
+        row.record[key] = $id();
+      })
+    })
+  }
+
+  function generateRowCheckIds() {
+    uuids.rows.forEach(row => row.record.check = $id())
+  }
+
+  function generateBtnIds() {
+    labels.table.forEach(label => uuids.btns[label.key] = $id())
+  }
+
+  function getSelectedRecords() {
+    return dataArray.filter((row, index) => {
+      return $el(uuids.rows[index].record.check).checked;
+    })
+  }
+
   function mount(element) {
+    pipeline.mount.forEach(action => action())
     el = element;
     update();
     return this;
+  }
+
+  function update() {
+    pipeline.preRender.forEach(action => action());
+    el.innerHTML = getBootstrapTableHtml();
+    pipeline.postRender.forEach(action => action())
+  }
+
+  function reload() {
+    dataArray = apiClient.getAllRecords();
+    update();
   }
 
   function getDataSnapshot() {
@@ -45,277 +132,309 @@ function simpleTable(apiClient) {
   }
 
   function renameColumn(column, name) {
-    columns[column] = name;
-    selectedColumns[column] = name;
+    $col(column).name = name;
     return this;
   }
 
-  function selectColumns(...columns) {
-    Object.keys(selectedColumns).forEach(column => {
-      if (!columns.includes(column)) delete selectedColumns[column]
+  function specifyColumnType(column, type) {
+    $col(column).type = type;
+    return this;
+  }
+
+  function selectIdentifier(column) {
+    $col(column).identifier = true;
+    return this;
+  }
+
+  function selectColumns(...selectedColumns) {
+    columns.forEach(column => {
+      if (!selectedColumns.includes(column.key)) column.displayed = false;
     })
     return this;
   }
 
   function addColumnsTogether(columnNames, columnName) {
-    dataArray.map(data => {
+    pipeline.preRender.push(() => dataArray.map(data => {
       data[columnName] = columnNames
         .map(name => data[name]).reduce((a, b) => a + b, 0)
-    })
-    columns[columnName] = columnName;
-    selectedColumns[columnName] = columnName;
-    return this;
-  }
-
-  function addSelectRow() {
-    includeSelect = true;
+    }))
+    columns.push({ key: columnName, name: columnName, displayed: true, identifier: true, type: "number" });
     return this;
   }
 
   function compare(a, b, sortedBy, hierarchyIndex) {
     let currentHierarchyIndex = hierarchyIndex + 1;
     if (a[sortedBy] === b[sortedBy])
-      return currentHierarchyIndex < sortHierarchy.length ?
-        compare(a, b, sortHierarchy[currentHierarchyIndex], currentHierarchyIndex) : 0;
-    if (sortedInDescendingOrder && a[sortedBy] > b[sortedBy] || !sortedInDescendingOrder && a[sortedBy] < b[sortedBy])
+      return currentHierarchyIndex < config.sortHierarchy.length ?
+        compare(a, b, config.sortHierarchy[currentHierarchyIndex], currentHierarchyIndex) : 0;
+    if (config.sortedInDescendingOrder && a[sortedBy] > b[sortedBy] || !config.sortedInDescendingOrder && a[sortedBy] < b[sortedBy])
       return -1;
     return 1;
   }
 
-  function sort(sortedBy) {
-    dataArray.sort((a, b) => compare(a, b, sortedBy, -1))
+  function sort() {
+    dataArray.sort((a, b) => compare(a, b, config.sortedBy, -1))
   }
 
-  function sortInDescendingOrder(sortedBy) {
-    sortedInDescendingOrder = true;
-    sort(sortedBy);
+  function sortInDescendingOrder(column) {
+    config.sortedBy = column;
+    config.sortedInDescendingOrder = true;
+    pipeline.preRender.push(sort);
     return this;
   }
 
-  function sortInAscendingOrder(sortedBy) {
-    sortedInDescendingOrder = false;
-    sort(sortedBy);
+  function sortInAscendingOrder(column) {
+    config.sortedBy = column;
+    config.sortedInDescendingOrder = false;
+    pipeline.preRender.push(sort);
     return this;
   }
 
   function deleteColumn(column) {
-    delete selectedColumns[column];
+    $col(column).displayed = false;
     return this;
   }
 
   function deleteColumns(...columnNames) {
-    columnNames.forEach(column => delete selectedColumns[column]);
+    columnNames.forEach(column => deleteColumn(column));
     return this;
   }
 
   function extractColumnsFromDataArray() {
-    Object.keys(dataArray[0]).forEach(column => {
-      columns[column] = column
-      selectedColumns[column] = column
-    }
-    )
+    Object.entries(dataArray[0]).forEach(([key, value]) => {
+      columns.push({
+        "key": key, name: key, displayed: true, identifier: false,
+        type: typeof value === "number" ? "number" : "text"
+      })
+    })
   }
 
   function addClickSortingEvent() {
-    includeClickSortingEvent = true;
-    postRenderingActions.push(() => Object.keys(selectedColumns).forEach((key, index) => {
-      el.getElementsByClassName('column')[index].addEventListener('click', onClickColumn.bind(this, key))
+    config.includeClickSortingEvent = true;
+    pipeline.preRender.push(sort);
+    pipeline.postRender.push(() => $renderedCols().forEach((column) => {
+      $el(uuids.columns[column.key]).addEventListener('click', onClickColumn.bind(this, column.key))
     }
     ))
     return this;
   }
 
   function prettifyColumns() {
-    Object.keys(columns).forEach(column => {
-      columns[column] = column.split(/[_\s-]+/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
-      selectedColumns[column] = column.split(/[_\s-]+/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+    columns.forEach(column => {
+      column.name = column.key.split(/[_\s-]+/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
     })
     return this;
   }
 
-  function update() {
-    el.innerHTML = getBootstrapTableHtml();
-    postRenderingActions.forEach(action => action())
-  }
-
-  function reload() {
-    dataArray = apiClient.getAllRecords();
-    sort(sortedBy);
-    update();
-  }
-
   function onClickColumn(column) {
-    sortedInDescendingOrder = !sortedInDescendingOrder;
-    sortedBy = column;
-    sort(sortedBy);
+    config.sortedInDescendingOrder = !config.sortedInDescendingOrder;
+    config.sortedBy = column;
     update();
+  }
+
+  function addBatchActions() {
+    config.includeBatchActions = true;
+    pipeline.mount.push(generateBtnIds);
+    pipeline.preRender.push(generateRowCheckIds);
+    pipeline.postRender.push(() => {
+      labels.table.forEach(({ key }) => $el(uuids.btns[key]).addEventListener('click', () => dialogHandler.updateDialogTable(key, getSelectedRecords())));
+    })
+    return this;
   }
 
   function addSingleRecordActions() {
-    postRenderingActions.push(() => {
-     dialogManager(this).dialogs.forEach(dialog => {
-       dialog.addCloseEvent(dialog.buttons);
-       dialog.addAcceptEvent(dialog.buttons);
-       el.querySelectorAll(`.${dialog.type}.action.button`).forEach((btn, index) => {
-         btn.addEventListener('click', dialog.update.bind(this, index))
-         btn.addEventListener('click', dialog.show.bind(this))
-       })
-     })
-   })
+    config.includeSingleRecordActions = true;
+    pipeline.preRender.push(generateRowBtnIds)
+    pipeline.postRender.push(() => {
+      uuids.rows.forEach((row, index) => {
+        labels.record.forEach(({ key }) => {
+          $el(row.record[key]).addEventListener('click', () => dialogHandler.updateDialogTable(key, dataArray[index]));
+        });
+      });
+    })
+    return this;
+  }
 
-   includeSingleRecordActions = true;
-   return this;
- }
+  function dialogManager() {
 
-  function dialogManager(cntx) {
+    let currentRecords, currentType
+    const dialogPostRenderActions = []
 
-    const context = cntx;
-    let currentRecordIndex;
+    const uuids = {
+      root: $id(), accept: $id(), title: $id(), body: $id(),
+      table: columns.reduce((result, column) => {
+        result[column.key] = $id(); return result;
+      }, {})
+    }
 
-    const dialogs = [
-      {
-        type: "delete",
-        html: () => getDeleteDialogHtml(),
-        update: (index) => {currentRecordIndex = index},
-        show: () => showDialog("delete"),
-        buttons: {
-          accept: () => document.querySelector(`#${name}-delete-modal .accept`),
-          reject: () => document.querySelector(`#${name}-delete-modal .reject`)
-        },
-        addCloseEvent: (buttons) => addCloseDialogEvents("delete", buttons.accept(), buttons.reject()),
-        addAcceptEvent: (buttons) => addAcceptEvent(buttons.accept(), deleteRecord) 
+    function addAcceptBtnListener() {
+      $el(uuids.accept).addEventListener('click', onAccept.bind(this));
+    }
+
+    const dialogs = {
+      "view": {
+        title: "Detailed record",
+        accept: "Ok",
+        body: () => getDialogTableHtml("readonly"),
+        callback: () => { }
       },
-      {
-        type: "view",
-        html: () => getRecordDialogHtml("view", "Detailed Record", "Ok"),
-        update: (index) => updateDialogTable("view", index),
-        show: () => showDialog("view"),      
-        buttons: {
-          accept: () => document.querySelector(`#${name}-view-modal .Ok`)
-        },
-        addCloseEvent: (buttons) => addCloseDialogEvents("view", buttons.accept()),
-        addAcceptEvent: () => {}
+      "delete": {
+        title: "Delete record",
+        accept: "Confirm",
+        body: () => "<p>Are you sure you want to delete this record?</p>",
+        callback: deleteRecord
       },
-      {
-        type: "edit",
-        html: () => getRecordDialogHtml("edit", "Edit record", "Save", "Discard"),
-        update: (index) => updateDialogTable("edit", index),
-        show: () => showDialog("edit"),
-        buttons: {
-          accept: () => document.querySelector(`#${name}-edit-modal .Save`),
-          reject: () => document.querySelector(`#${name}-edit-modal .Discard`)
-        },
-        addCloseEvent: (buttons) => addCloseDialogEvents("edit", buttons.accept(), buttons.reject()),
-        addAcceptEvent: () => {},
-      
+      "edit": {
+        title: "Edit record",
+        accept: "Save",
+        body: () => getDialogTableHtml("singleOverride"),
+        callback: editRecord
+      },
+      "batchDelete": {
+        title: "Delete records",
+        accept: "Confirm",
+        body: () => "<p>Are you sure you want to delete these records?</p>",
+        callback: deleteRecords
+      },
+      "batchEdit": {
+        title: "Batch edit records",
+        accept: "Save",
+        body: () => getDialogTableHtml("multiOverride"),
+        callback: editRecords
       }
-    ]
-
-    function getButtonHtml(btnLabel) {
-      return `${btnLabel ? `<button class="${name} ${btnLabel} button popup m-2 float-right">${btnLabel}</button>` : ""}`
     }
 
-    function addCloseDialogEvents(type, ...buttons) {
-      buttons.forEach(btn => btn.addEventListener('click', closeDialog.bind(cntx, type)))
+    function getDataTarget() {
+      return uuids.root;
     }
 
-    function addAcceptEvent(button, callback){
-       button.addEventListener('click', callback.bind(cntx))
+    function addCss(querySelector, className) {
+      dialogPostRenderActions.push(() => {
+        document.querySelectorAll(`#${uuids.root} ${querySelector}`).forEach(element => element.classList.add(...className.split(" ")))
+      })
     }
 
-    function showDialog(action) {
-      document.body.style.overflowY = "hidden";
-      document.getElementById(`${name}-${action}-modal`).showModal();
-    }
-
-    function closeDialog(action) {
-      document.body.style.overflowY = "visible";
-      document.getElementById(`${name}-${action}-modal`).close();
-    }
-
-    function getAllDialogsHtml() {
-      return dialogs.map(dialog => dialog.html()).join(' ');
+    function onAccept() {
+      dialogs[currentType].callback();
     }
 
     function deleteRecord() {
-      if (apiClient.deleteRecord(dataArray[currentRecordIndex])) {
+      if (apiClient.deleteRecord(currentRecords)) {
         reload();
       }
     }
 
-    function getRecordDialogHtml(type, title, accept, reject) {
-      return `
-        <dialog id="${name}-${type}-modal">
-          <h3>${title}</h3>
+    function deleteRecords(){
+      if (apiClient.deleteRecords(currentRecords)) {
+        reload();
+      }
+    }
+
+    function editRecords() {
+      currentRecords.forEach(record => {
+        columns.forEach(column => {
+          const value = $el(uuids.table[column.key]).value;
+          if (value) record[column.key] = column.type === "number" ? parseInt(value) : value;
+        })
+      })
+      if (apiClient.editRecords(currentRecords)) reload();
+    }
+
+
+    function editRecord() {
+      const record = columns.reduce((result, column) => {
+        result[column.key] = column.type === "number" ?
+          parseInt($el(uuids.table[column.key]).value)
+          : $el(uuids.table[column.key]).value;
+        return result;
+      }, {});
+      if (apiClient.editRecord(record)) reload();
+    }
+
+    function updateDialogTable(dialogType, records) {
+      currentRecords = records, currentType = dialogType;
+      const dialog = dialogs[dialogType];
+      $el(uuids.body).innerHTML = dialog.body();
+      $el(uuids.title).innerText = dialog.title;
+      $el(uuids.accept).innerText = dialog.accept;
+      dialogPostRenderActions.forEach(action => action())
+    }
+
+    function getDialogTableHtml(option, records) {
+      return `      
           <table class="table popup">
-            <tbody class="${name} ${type} dialogTable"> 
+            <tbody class="${name} ${currentType} dialogTable"> 
+            ${columns.map(column => `
+            <tr>
+              <td>${column.name}</td>
+              ${option === "readonly" ? `<td>${currentRecords[column.key]}</td>` : ""}
+              ${option === "singleOverride" ? `<td><input type="${column.type}" id="${uuids.table[column.key]}" ${column.identifier ? "disabled" : ""} value="${currentRecords[column.key]}"/></td>` : ""}
+              ${option === "multiOverride" ? `<td><input type="${column.type}" id="${uuids.table[column.key]}" ${column.identifier ? "disabled" : ""} placeholder="${currentRecords.map(record => record[column.key]).join(', ')}"/></td>` : ""}
+            </tr>
+          `).join('')}
             </tbody>
           </table>
-          ${getButtonHtml(accept)}
-          ${getButtonHtml(reject)}
-        </dialog>
       `;
     }
 
-    function getDeleteDialogHtml() {
+    function getDialogHtml() {
       return `
-        <dialog id="${name}-delete-modal">
-          <p>Are you sure that you want to delete this record?</p>
-          <div class="d-flex flex-row justify-content-center">
-            <button class="accept m-3">Yes</button>
-            <button class="reject m-3">No</button>
-          </div>    
-        </dialog>
+        <div class='modal fade' id="${uuids.root}" tabindex='-1' role='dialog' aria-labelledby='exampleModalLabel' aria-hidden='true'>
+          <div class="modal-dialog" role="document">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="${uuids.title}"></h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+              <div id="${uuids.body}" class="modal-body">
+              </div>
+              <div class="modal-footer">
+                <button id="${uuids.accept}" type="button" data-dismiss="modal" class="btn btn-primary"></button>
+              </div>
+            </div>
+          </div>
+        </div>
       `;
     }
 
-    function updateDialogTable(action, index) {
-      currentRecordIndex = index;
-      el.querySelector(`.dialogTable.${action}`).innerHTML = `
-      ${Object.entries(columns).map(([key, value]) => `
-        <tr>
-          <td>${value}</td>
-          <td>${action === "edit" ? `<input type="text" value="${dataArray[index][key]}"/>` : dataArray[index][key]} </td>
-        </tr>
-      `).join('')}
-    `;
-
-    }
 
     return {
-      dialogs,
-      getAllDialogsHtml
+      addAcceptBtnListener,
+      updateDialogTable,
+      getDialogHtml,
+      addCss,
+      getDataTarget
     }
   }
 
-
-
-
-
-
   function getBootstrapTableHtml() {
     return `
-    ${includeSingleRecordActions ? dialogManager().getAllDialogsHtml() : ""}
+     ${config.includeSingleRecordActions ? dialogHandler.getDialogHtml() : ""}
+     ${config.includeBatchActions ? `<div class="d-flex flex-row justify-content-end gap-3">
+    ${labels.table.map(label => `<button data-toggle="modal" data-target="#${dialogHandler.getDataTarget()}" id=${uuids.btns[label.key]} type="button" class="btn btn-secondary btn-sm m-1">${label.name}</button>`).join('')} 
+    </div>` : ""}
       <table class="${name} table">
         <thead class="${name} tableHead">
           <tr>
-            ${includeRows ? "<th scope='col'>#</th>" : ""}
-            ${includeSelect ? "<th scope='col'>Select</th>" : ""}
-            ${Object.values(selectedColumns).map((value) =>
-      `<th class="column" scope="col" ${includeClickSortingEvent ? "style='cursor:pointer;'" : ""}>${value}</th>`
+            ${config.includeRows ? "<th scope='col'>#</th>" : ""}
+            ${config.includeBatchActions ? `<th scope='col'>Select</th>` : ""}
+            ${$renderedCols().map(column =>
+      `<th class="column" scope="col" id="${uuids.columns[column.key]}" ${config.includeClickSortingEvent ? "style='cursor:pointer;'" : ""}>${column.name}</th>`
     ).join('')}
-            ${includeSingleRecordActions ? `<th scope='col' colspan="${singleRecordActionLabels.length}" class="text-center">Actions</th>` : ""}
+            ${config.includeSingleRecordActions ? `<th scope='col' colspan="${labels.record.length}" class="text-center">Actions</th>` : ""}
           </tr>
         </thead>
         <tbody>
           ${dataArray.map((data, index) => `
             <tr>
-              ${includeRows ? `<th scope='row'>${index + 1}</th>` : ""}
-              ${includeSelect ? "<th> <input type='checkbox' style='cursor:pointer'/> </th>" : ""}
-              ${Object.keys(selectedColumns).map(column => `<td>${data[column] ?? ""}</td>`).join('')}
-              ${includeSingleRecordActions ?
-        singleRecordActionLabels.map(label =>
-          `<td><button type="button" class="${name} button action ${label.toLowerCase()}">${label}</button></td>`
+              ${config.includeRows ? `<th scope='row'>${index + 1}</th>` : ""}
+              ${config.includeBatchActions ? `<th> <input type='checkbox' id="${uuids.rows[index].record.check}" style='cursor:pointer'/> </th>` : ""}
+              ${$renderedCols().map(column => `<td>${data[column.key] ?? ""}</td>`).join('')}
+              ${config.includeSingleRecordActions ?
+        labels.record.map(label =>
+          `<td><button id="${uuids.rows[index].record[label.key]}" type="button" class="${name} button action ${label.key}" data-toggle="modal" data-target="#${dialogHandler.getDataTarget()}">${label.name}</button></td>`
         ).join('') : ""}
             </tr>
           `).join('')}
@@ -338,9 +457,11 @@ function simpleTable(apiClient) {
     deleteColumns,
     getDataSnapshot,
     addColumnsTogether,
-    addSelectRow,
     addSingleRecordActions,
-    selectColumns
+    selectColumns,
+    selectIdentifier,
+    specifyColumnType,
+    addBatchActions
   };
 }
 
