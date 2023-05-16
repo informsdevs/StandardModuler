@@ -1,3 +1,13 @@
+async function apiClient(){
+   
+  const response = await fetch("https://in.informs.dk/api/api.php/records/platformcc6831243_tokens_793524");
+
+  console.log(response.json())
+
+}
+
+
+
 function mockApiClient(){
 
    let data = [

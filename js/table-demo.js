@@ -1,6 +1,9 @@
 
 window.addEventListener("DOMContentLoaded", async () => {
 
+
+
+
     const apiClient  = mockApiClient();
   
     const table = defaultStylizedTable(apiClient)
@@ -11,6 +14,8 @@ window.addEventListener("DOMContentLoaded", async () => {
         .selectColumns("name", "challenge", "academy", "manual_points", "Total")
         .addSingleRecordActions()
         .mount(document.getElementById("stonortable"))
+
+    console.log(table.getModalId())
 
     const apiClient2 = mockApiClient();
 

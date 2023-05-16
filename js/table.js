@@ -242,6 +242,10 @@ function simpleTable(apiClient) {
     return this;
   }
 
+  function getModalId(){
+    return dialogHandler.getDataTarget();
+  }
+
   function addSingleRecordActions() {
     config.includeSingleRecordActions = true;
     pipeline.preRender.push(generateRowBtnIds)
@@ -461,7 +465,8 @@ function simpleTable(apiClient) {
     selectColumns,
     selectIdentifier,
     specifyColumnType,
-    addBatchActions
+    addBatchActions,
+    getModalId
   };
 }
 
