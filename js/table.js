@@ -364,6 +364,8 @@ function simpleTable(apiClient) {
       $el(uuids.title).innerText = dialog.title;
       $el(uuids.accept).innerText = dialog.accept;
       bootstrapModal.show();
+      $el(uuid.root).style.display = "block"
+      $el(uuid.root).style.visibility = "visible"
       dialogPostRenderActions.forEach(action => action())
     }
 
