@@ -263,6 +263,7 @@ function simpleTable(apiClient) {
 
     let currentRecords, currentType
     const dialogPostRenderActions = []
+    let bootstrapModal;
 
     const uuids = {
       root: $id(), accept: $id(), title: $id(), body: $id(),
@@ -273,6 +274,7 @@ function simpleTable(apiClient) {
 
     function addAcceptBtnListener() {
       $el(uuids.accept).addEventListener('click', onAccept.bind(this));
+      bootstrapModal = new bootstrap.Modal($el(uuids.root), {});
     }
 
     const dialogs = {
@@ -361,6 +363,7 @@ function simpleTable(apiClient) {
       $el(uuids.body).innerHTML = dialog.body();
       $el(uuids.title).innerText = dialog.title;
       $el(uuids.accept).innerText = dialog.accept;
+      bootstrapModal.show();
       dialogPostRenderActions.forEach(action => action())
     }
 
@@ -438,7 +441,7 @@ function simpleTable(apiClient) {
               ${$renderedCols().map(column => `<td>${data[column.key] ?? ""}</td>`).join('')}
               ${config.includeSingleRecordActions ?
         labels.record.map(label =>
-          `<td><button id="${uuids.rows[index].record[label.key]}" type="button" class="${name} button action ${label.key}" data-toggle="modal" data-target="#${dialogHandler.getDataTarget()}">${label.name}</button></td>`
+          `<td><button id="${uuids.rows[index].record[label.key]}" type="button" class="${name} button action ${label.key}">${label.name}</button></td>`
         ).join('') : ""}
             </tr>
           `).join('')}

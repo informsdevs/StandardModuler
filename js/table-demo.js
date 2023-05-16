@@ -15,7 +15,6 @@ window.addEventListener("DOMContentLoaded", async () => {
         .addSingleRecordActions()
         .mount(document.getElementById("stonortable"))
 
-    console.log(table.getModalId())
 
     const apiClient2 = mockApiClient();
 
