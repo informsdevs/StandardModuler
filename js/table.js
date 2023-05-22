@@ -14,6 +14,8 @@ function simpleTable(apiClient) {
     sortHierarchy: [],
     sortedBy: "",
     sortedInDescendingOrder: true,
+    infoColumn: "",
+    referenceColumnsByName: false,
     includeRows: false,
     includeClickSortingEvent: false,
     includeBatchActions: false,
@@ -25,14 +27,12 @@ function simpleTable(apiClient) {
     table: [{ key: "add", name: "Add record" }, { key: "batchDelete", name: "Delete" }, { key: "batchEdit", name: "Batch edit" }, { key: "batchSend", name: "Send" }, { key: "upload", name: "Upload" }, { key: "export", name: "Export" }]
   }
 
-  const uuids = { columns: {}, rows: [], btns: {} }
-  const columns = [];
+  const uuids = { columns: {}, rows: [], btns: {}, labels: {} }
+  let columns = [];
 
   let dialogHandler;
 
-  let dataArray = apiClient.getAllRecords();
-
-  extractColumnsFromDataArray();
+  initializeColumns();
 
   pipeline.mount.push(generateColumnIds);
 
@@ -47,21 +47,31 @@ function simpleTable(apiClient) {
     if (config.includeBatchActions || config.includeSingleRecordActions)
       dialogHandler.addAcceptBtnListener()
   });
+  
+  $ref = "key";
 
   function $el(id) {
     return document.getElementById(id);
   }
 
   function $col(columnName) {
-    return columns.find(column => column.key === columnName);
+    return columns.find(column => column[$ref] === columnName);
   }
 
   function $id() {
     return `generictableid-${uuid.v4()}`
   }
 
-  function $renderedCols() {
-    return columns.filter(column => column.displayed);
+  function $cols() {
+    return columns.filter(column => column.col);
+  }
+
+  function $props() {
+    return columns.filter(column => column.prop);
+  }
+
+  function $key(name){
+    return $col(name).key
   }
 
   function addNumberedRows() {
@@ -81,8 +91,18 @@ function simpleTable(apiClient) {
     return this;
   }
 
+  function referenceColumnsByName() {
+    $ref = "name";
+    return this;
+  }
+
+  function referenceColumnsByKey() {
+    $ref = "key";
+    return this;
+  }
+
   function generateColumnIds() {
-    uuids.columns = $renderedCols().reduce((result, column) => {
+    uuids.columns = $cols().reduce((result, column) => {
       result[column.key] = $id(); return result;
     }, {})
   }
@@ -99,6 +119,10 @@ function simpleTable(apiClient) {
     uuids.rows.forEach(row => row.record.check = $id())
   }
 
+  function generateRowCountId(){
+    uuids.labels.rowCount = $id();
+  }
+
   function generateBtnIds() {
     labels.table.forEach(label => uuids.btns[label.key] = $id())
   }
@@ -109,6 +133,10 @@ function simpleTable(apiClient) {
     })
   }
 
+  function getNumberOfSelectedRows(){
+    return getSelectedRecords().length;
+  }
+
   function mount(element) {
     pipeline.mount.forEach(action => action())
     el = element;
@@ -116,19 +144,27 @@ function simpleTable(apiClient) {
     return this;
   }
 
-  function update() {
+  async function update() {
+    await fetchData();
     pipeline.preRender.forEach(action => action());
     el.innerHTML = getBootstrapTableHtml();
     pipeline.postRender.forEach(action => action())
   }
 
-  function reload() {
-    dataArray = apiClient.getAllRecords();
-    update();
+  async function fetchData() {
+    dataArray = await apiClient.getAllRecords();
+    columns.filter(column => column.type === "number").forEach(column => {
+      dataArray.forEach(record => record[column.key] = parseInt(record[column.key]));
+    })
   }
 
   function getDataSnapshot() {
     return dataArray;
+  }
+
+  function setInfoColumn(column){
+    config.infoColumn = $key(column);
+    return this;
   }
 
   function renameColumn(column, name) {
@@ -136,8 +172,18 @@ function simpleTable(apiClient) {
     return this;
   }
 
+  function renameColumns(...arr) {
+    arr.forEach(column => renameColumn(column[0], column[1]));
+    return this;
+  }
+
   function specifyColumnType(column, type) {
     $col(column).type = type;
+    return this;
+  }
+
+  function specifyColumnTypes(columns, type) {
+    columns.forEach(column => specifyColumnType(column, type))
     return this;
   }
 
@@ -148,17 +194,24 @@ function simpleTable(apiClient) {
 
   function selectColumns(...selectedColumns) {
     columns.forEach(column => {
-      if (!selectedColumns.includes(column.key)) column.displayed = false;
+       column.col = selectedColumns.includes(column[$ref])
     })
     return this;
   }
 
-  function addColumnsTogether(columnNames, columnName) {
+  function selectProperties(...selectedProperties) {
+    columns.forEach(column => {
+      column.prop = selectedProperties.includes(column[$ref]);
+    })
+    return this;
+  }
+
+  function createSumOfColumn(columnNames, columnName) {
     pipeline.preRender.push(() => dataArray.map(data => {
       data[columnName] = columnNames
-        .map(name => data[name]).reduce((a, b) => a + b, 0)
+        .map(name => data[$key(name)]).reduce((a, b) => a + b, 0)
     }))
-    columns.push({ key: columnName, name: columnName, displayed: true, identifier: true, type: "number" });
+    columns.push({ key: columnName, name: columnName, col: true, prop: true, identifier: true, type: "number" });
     return this;
   }
 
@@ -177,21 +230,19 @@ function simpleTable(apiClient) {
   }
 
   function sortInDescendingOrder(column) {
-    config.sortedBy = column;
+    config.sortedBy = $key(column);
     config.sortedInDescendingOrder = true;
-    pipeline.preRender.push(sort);
     return this;
   }
 
   function sortInAscendingOrder(column) {
-    config.sortedBy = column;
+    config.sortedBy = $key(column);
     config.sortedInDescendingOrder = false;
-    pipeline.preRender.push(sort);
     return this;
   }
 
   function deleteColumn(column) {
-    $col(column).displayed = false;
+    $col(column).col = false;
     return this;
   }
 
@@ -200,19 +251,19 @@ function simpleTable(apiClient) {
     return this;
   }
 
-  function extractColumnsFromDataArray() {
-    Object.entries(dataArray[0]).forEach(([key, value]) => {
-      columns.push({
-        "key": key, name: key, displayed: true, identifier: false,
-        type: typeof value === "number" ? "number" : "text"
-      })
+  function initializeColumns() {
+    apiClient.getMetaData().forEach(column => {
+      column.name = column.key
+      column.col = true
+      column.prop = true;
+      column.identifier = false
+      columns.push(column);
     })
   }
 
   function addClickSortingEvent() {
     config.includeClickSortingEvent = true;
-    pipeline.preRender.push(sort);
-    pipeline.postRender.push(() => $renderedCols().forEach((column) => {
+    pipeline.postRender.push(() => $cols().forEach((column) => {
       $el(uuids.columns[column.key]).addEventListener('click', onClickColumn.bind(this, column.key))
     }
     ))
@@ -232,19 +283,21 @@ function simpleTable(apiClient) {
     update();
   }
 
+  function onClickCheckBox(){
+    $el(uuids.labels.rowCount).innerText = `${getNumberOfSelectedRows()} row(s) selected`;
+  }
+
   function addBatchActions() {
     config.includeBatchActions = true;
     pipeline.mount.push(generateBtnIds);
-    pipeline.preRender.push(generateRowCheckIds);
+    pipeline.preRender.push(generateRowCheckIds, generateRowCountId);
     pipeline.postRender.push(() => {
       labels.table.forEach(({ key }) => $el(uuids.btns[key]).addEventListener('click', () => dialogHandler.updateDialogTable(key, getSelectedRecords())));
+      uuids.rows.forEach(row => $el(row.record.check).addEventListener('click', onClickCheckBox.bind(this)));
     })
     return this;
   }
 
-  function getModalId(){
-    return dialogHandler.getDataTarget();
-  }
 
   function addSingleRecordActions() {
     config.includeSingleRecordActions = true;
@@ -259,22 +312,23 @@ function simpleTable(apiClient) {
     return this;
   }
 
+
+
   function dialogManager() {
 
     let currentRecords, currentType
     const dialogPostRenderActions = []
-    let bootstrapModal;
 
     const uuids = {
       root: $id(), accept: $id(), title: $id(), body: $id(),
-      table: columns.reduce((result, column) => {
-        result[column.key] = $id(); return result;
+      table: $props().reduce((result, column) => {
+        result[column.key] = {input: $id(), check: $id()}; 
+        return result;
       }, {})
     }
 
     function addAcceptBtnListener() {
       $el(uuids.accept).addEventListener('click', onAccept.bind(this));
-      bootstrapModal = new bootstrap.Modal($el(uuids.root), {});
     }
 
     const dialogs = {
@@ -287,7 +341,7 @@ function simpleTable(apiClient) {
       "delete": {
         title: "Delete record",
         accept: "Confirm",
-        body: () => "<p>Are you sure you want to delete this record?</p>",
+        body: () => getDeleteBody(),
         callback: deleteRecord
       },
       "edit": {
@@ -296,17 +350,25 @@ function simpleTable(apiClient) {
         body: () => getDialogTableHtml("singleOverride"),
         callback: editRecord
       },
+      "add": {
+        title: "Add new record",
+        accept: "Save",
+        body: () => getDialogTableHtml("singleOverride"),
+        callback: createRecord
+
+      },
       "batchDelete": {
         title: "Delete records",
         accept: "Confirm",
-        body: () => "<p>Are you sure you want to delete these records?</p>",
-        callback: deleteRecords
+        body: () => getBatchDeleteBody(),
+        callback: deleteRecords,
       },
       "batchEdit": {
         title: "Batch edit records",
         accept: "Save",
         body: () => getDialogTableHtml("multiOverride"),
-        callback: editRecords
+        callback: editRecords,
+        postrender: addCheckEventListener
       }
     }
 
@@ -324,37 +386,65 @@ function simpleTable(apiClient) {
       dialogs[currentType].callback();
     }
 
-    function deleteRecord() {
-      if (apiClient.deleteRecord(currentRecords)) {
-        reload();
-      }
+    async function deleteRecord() {
+      await apiClient.deleteRecord(currentRecords)
+      update();
     }
 
-    function deleteRecords(){
-      if (apiClient.deleteRecords(currentRecords)) {
-        reload();
-      }
+    async function deleteRecords() {
+      await apiClient.deleteRecords(currentRecords)
+      update();
     }
 
-    function editRecords() {
-      currentRecords.forEach(record => {
-        columns.forEach(column => {
-          const value = $el(uuids.table[column.key]).value;
-          if (value) record[column.key] = column.type === "number" ? parseInt(value) : value;
-        })
+    function extractUserInput(){
+      const record = {};
+      $props().filter(prop => !prop.identifier).forEach(prop => {
+        const value = $el(uuids.table[prop.key].input).value;
+        if (value) record[prop.key] = prop.type === "number" ? parseInt(value) : value;
       })
-      if (apiClient.editRecords(currentRecords)) reload();
+      return record;
+    }
+
+    function getSelectedProps(){
+      return $props().filter(prop => {
+        return !$el(uuids.table[prop.key].input).disabled
+      })
+    }
+
+    async function editRecords() {
+      const sharedProperties = {};
+       getSelectedProps().forEach(prop => {
+        const value = $el(uuids.table[prop.key].input).value;
+        sharedProperties[prop.key] = prop.type === "number" ? parseInt(value) : value;
+      })
+      const records = currentRecords.map(record => {
+        return { "tid": record.tid, ...sharedProperties };
+      })
+      await apiClient.editRecords(records)
+      update();
     }
 
 
-    function editRecord() {
-      const record = columns.reduce((result, column) => {
-        result[column.key] = column.type === "number" ?
-          parseInt($el(uuids.table[column.key]).value)
-          : $el(uuids.table[column.key]).value;
-        return result;
-      }, {});
-      if (apiClient.editRecord(record)) reload();
+    async function editRecord() {
+      const record = {"tid" : currentRecords.tid, ...extractUserInput()};           
+      await apiClient.editRecord(record) 
+      update();
+    }
+
+    async function createRecord(){
+      const record = {"tid" : currentRecords.tid, ...extractUserInput()};
+      await apiClient.createNewRecord(record) 
+      update();
+    }
+
+    function addCheckEventListener(){
+      $props().filter(prop => !prop.identifier).forEach((prop) => {
+        $el(uuids.table[prop.key].check).addEventListener('click', () => onClickCheck(uuids.table[prop.key]))
+      })
+    }
+
+    function onClickCheck(row){
+      $el(row.input).disabled = !$el(row.check).checked;
     }
 
     function updateDialogTable(dialogType, records) {
@@ -363,22 +453,36 @@ function simpleTable(apiClient) {
       $el(uuids.body).innerHTML = dialog.body();
       $el(uuids.title).innerText = dialog.title;
       $el(uuids.accept).innerText = dialog.accept;
-      bootstrapModal.show();
-      $el(uuids.root).style.display = "block"
-      $el(uuids.root).style.visibility = "visible"
+      console.log(dialog.postrender)
+      if (dialog.postrender) dialog.postrender();
       dialogPostRenderActions.forEach(action => action())
+    }
+
+    function getDeleteBody(){
+      return `Are you sure you want to delete ${config.infoColumn ? currentRecords[config.infoColumn] : "this record"}?`
+    }
+
+    function getBatchDeleteBody(){
+      if(config.infoColumn){
+        const infoArr = currentRecords.map(record => record[config.infoColumn]);
+        const lastInstance = infoArr.pop();
+        return `Are you sure you want to delete ${infoArr.join(', ')} and ${lastInstance}?` 
+      }
+      return `Are you sure you want to delete these records?` 
     }
 
     function getDialogTableHtml(option, records) {
       return `      
           <table class="table popup">
             <tbody class="${name} ${currentType} dialogTable"> 
-            ${columns.map(column => `
+            ${$props().map(column => `
             <tr>
+             ${option === "multiOverride" && !column.identifier ? `<td><input type='checkbox' id="${uuids.table[column.key].check}" style='cursor:pointer'/></td>` : "" }
+             ${option === "multiOverride" && column.identifier ? "<td></td>" : ""}
               <td>${column.name}</td>
-              ${option === "readonly" ? `<td>${currentRecords[column.key]}</td>` : ""}
-              ${option === "singleOverride" ? `<td><input type="${column.type}" id="${uuids.table[column.key]}" ${column.identifier ? "disabled" : ""} value="${currentRecords[column.key]}"/></td>` : ""}
-              ${option === "multiOverride" ? `<td><input type="${column.type}" id="${uuids.table[column.key]}" ${column.identifier ? "disabled" : ""} placeholder="${currentRecords.map(record => record[column.key]).join(', ')}"/></td>` : ""}
+              ${option === "readonly" ? `<td>${currentRecords[column.key] ?? ""}</td>` : ""}
+              ${option === "singleOverride" ? `<td><input type="${column.type}" id="${uuids.table[column.key].input ?? ""}" ${column.identifier ? "disabled" : ""} value="${currentRecords[column.key] ?? ""}"/></td>` : ""}
+              ${option === "multiOverride" ? `<td><input type="${column.type}" id="${uuids.table[column.key].input ?? ""}" disabled </td>` : ""}
             </tr>
           `).join('')}
             </tbody>
@@ -429,7 +533,7 @@ function simpleTable(apiClient) {
           <tr>
             ${config.includeRows ? "<th scope='col'>#</th>" : ""}
             ${config.includeBatchActions ? `<th scope='col'>Select</th>` : ""}
-            ${$renderedCols().map(column =>
+            ${$cols().map(column =>
       `<th class="column" scope="col" id="${uuids.columns[column.key]}" ${config.includeClickSortingEvent ? "style='cursor:pointer;'" : ""}>${column.name}</th>`
     ).join('')}
             ${config.includeSingleRecordActions ? `<th scope='col' colspan="${labels.record.length}" class="text-center">Actions</th>` : ""}
@@ -440,15 +544,16 @@ function simpleTable(apiClient) {
             <tr>
               ${config.includeRows ? `<th scope='row'>${index + 1}</th>` : ""}
               ${config.includeBatchActions ? `<th> <input type='checkbox' id="${uuids.rows[index].record.check}" style='cursor:pointer'/> </th>` : ""}
-              ${$renderedCols().map(column => `<td>${data[column.key] ?? ""}</td>`).join('')}
+              ${$cols().map(column => `<td>${data[column.key] ?? ""}</td>`).join('')}
               ${config.includeSingleRecordActions ?
         labels.record.map(label =>
-          `<td><button id="${uuids.rows[index].record[label.key]}" type="button" class="${name} button action ${label.key}">${label.name}</button></td>`
+          `<td><button id="${uuids.rows[index].record[label.key]}" type="button" class="${name} button action ${label.key}" data-toggle="modal" data-target="#${dialogHandler.getDataTarget()}">${label.name}</button></td>`
         ).join('') : ""}
             </tr>
           `).join('')}
         </tbody>
       </table>
+      ${config.includeBatchActions ? `<p id="${uuids.labels.rowCount}">0 row(s) selected</p>` : ''}
     `;
   }
 
@@ -462,16 +567,21 @@ function simpleTable(apiClient) {
     sortInDescendingOrder,
     addClickSortingEvent,
     renameColumn,
+    renameColumns,
     deleteColumn,
     deleteColumns,
     getDataSnapshot,
-    addColumnsTogether,
+    createSumOfColumn,
     addSingleRecordActions,
     selectColumns,
     selectIdentifier,
     specifyColumnType,
+    specifyColumnTypes,
     addBatchActions,
-    getModalId
+    selectProperties,
+    referenceColumnsByName,
+    referenceColumnsByKey,
+    setInfoColumn
   };
 }
 

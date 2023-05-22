@@ -1,28 +1,27 @@
 
 window.addEventListener("DOMContentLoaded", async () => {
 
+    const apiClient = await platformccApiClient();
 
+    await apiClient.resetTestData();
 
-
-    const apiClient  = mockApiClient();
-  
-    const table = defaultStylizedTable(apiClient)
-        .addColumnsTogether(["academy", "challenge", "manual_points"], "Total")
+    const table = simpleTable(apiClient)
+        .selectIdentifier("tid")
+        .renameColumns(["attribute_1", "Employee Id"], ["attribute_2", "Name"], ["attribute_3", "Client"], ["attribute_4", "Country"], ["attribute_5", "Retailer"], ["attribute_6", "Store"], ["attribute_7", "Academy"], ["attribute_8", "Challenge"],  ["attribute_9", "Manual Points"])
+        .referenceColumnsByName()
+        .setInfoColumn("Name")
+        .specifyColumnTypes(["Academy", "Challenge", "Manual Points"], "number")
+        .createSumOfColumn(["Academy", "Challenge", "Manual Points"], "Total")
+        .selectProperties("Employee Id", "Name", "Client", "Country", "Retailer", "Store", "Academy", "Challenge", "Manual Points", "Total")
         .sortInDescendingOrder("Total")
         .addBatchActions()
-        .selectIdentifier("Employee_ID")
-        .selectColumns("name", "challenge", "academy", "manual_points", "Total")
+        .selectColumns("Name", "Academy", "Challenge", "Manual Points", "Total")
         .addSingleRecordActions()
         .mount(document.getElementById("stonortable"))
 
 
-    const apiClient2 = mockApiClient();
 
-        const table2 = defaultTable(apiClient2)
-        .addColumnsTogether(["academy", "challenge"], "Total")
-        .sortInDescendingOrder("Total")
-        .addSingleRecordActions()
-        .mount(document.getElementById("stonortable2"))
+
 
 });
 
