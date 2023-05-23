@@ -1,10 +1,5 @@
 async function platformccApiClient() {
 
-  const auth = {
-    url: "https://in.informs.dk/api/api.php/records/platformcc6831243_tokens_795517",
-    user: "dfhapiuser",
-    password: "5M7MydYzwIChC2kXfQJtIoGARJyrGeLFj6UzEK85"
-  }
 
   let initialRecords = await getAllRecords();
 
