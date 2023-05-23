@@ -5,6 +5,8 @@ async function platformccApiClient(auth) {
 
   async function getAllRecords(options) {
 
+    console.log(auth);
+
     let url = auth.url;
 
     const params = [];
