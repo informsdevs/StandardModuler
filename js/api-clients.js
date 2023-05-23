@@ -1,4 +1,4 @@
-async function platformccApiClient() {
+async function platformccApiClient(auth) {
 
 
   let initialRecords = await getAllRecords();
