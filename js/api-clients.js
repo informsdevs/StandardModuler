@@ -5,7 +5,6 @@ async function platformccApiClient(auth) {
 
   async function getAllRecords(options) {
 
-    console.log(auth);
 
     let url = auth.url;
 
@@ -84,8 +83,6 @@ async function platformccApiClient(auth) {
 
   async function deleteRecords(records) {
 
-    console.log(records)
-
     const ids = records.map(record => record.tid).join(",");
 
     const url = `${auth.url}/${ids}`;
@@ -112,7 +109,6 @@ async function platformccApiClient(auth) {
   }
 
   async function createNewRecord(record) {
-    console.log(record)
     await fetch(auth.url, {
       method: "POST",
       body: JSON.stringify(record),
@@ -122,7 +118,6 @@ async function platformccApiClient(auth) {
   }
 
   async function createNewRecords(records) {
-    console.log(records)
     await Promise.all(records.map(async (record) => {
       await createNewRecord(record);
     }));
@@ -130,7 +125,6 @@ async function platformccApiClient(auth) {
   }
 
   function getMetaData() {
-    console.log(initialRecords)
     return Object.entries(initialRecords[0]).map(([key, value]) => {
       return {
         "key": key,

@@ -19,12 +19,14 @@ function simpleTable(apiClient) {
     includeRows: false,
     includeClickSortingEvent: false,
     includeBatchActions: false,
-    includeSingleRecordActions: false
+    includeSingleRecordActions: false,
+    includeSendButton: false,
+    includeSearchBars: false
   }
 
   const labels = {
-    record: [{ key: "view", name: "View" }, { key: "delete", name: "Delete" }, { key: "edit", name: "Edit" }, { key: "send", name: "Send" }],
-    table: [{ key: "add", name: "Add record" }, { key: "batchDelete", name: "Delete" }, { key: "batchEdit", name: "Batch edit" }, { key: "batchSend", name: "Send" }, { key: "upload", name: "Upload" }, { key: "export", name: "Export" }]
+    record: [{ key: "view", name: "View" }, { key: "delete", name: "Delete" }, { key: "edit", name: "Edit" }],
+    table: [{ key: "add", name: "Add record" }, { key: "batchDelete", name: "Delete" }, { key: "batchEdit", name: "Batch edit" }, { key: "upload", name: "Upload" }, { key: "export", name: "Export" }]
   }
 
   const uuids = { columns: {}, rows: [], btns: {}, labels: {} }
@@ -287,6 +289,25 @@ function simpleTable(apiClient) {
     $el(uuids.labels.rowCount).innerText = `${getNumberOfSelectedRows()} row(s) selected`;
   }
 
+  function addSearchBar(){
+    config.includeSearchBars = true;
+    pipeline.preRender.push(() => {
+      uuids.btns.search = {}
+      $cols().forEach(column => uuids.btns.search[column.name] = $id())
+    })
+/*      pipeline.postRender.push(() => {
+      uuids.btns.search.forEach(btnId => {
+        $el(btnId).addEventListener('keypress', () => )
+      })
+
+    }) */ 
+    return this;
+  }
+
+  function searchRows(column, text){
+
+  }
+
   function addBatchActions() {
     config.includeBatchActions = true;
     pipeline.mount.push(generateBtnIds);
@@ -296,6 +317,43 @@ function simpleTable(apiClient) {
       uuids.rows.forEach(row => $el(row.record.check).addEventListener('click', onClickCheckBox.bind(this)));
     })
     return this;
+  }
+
+  function transposeRecord(record){
+    const updatedRecord = {};
+    $props().forEach(prop => updatedRecord[prop.name] = record[prop.key])
+    return updatedRecord
+  }
+
+  function addSendButton(callback){
+    config.includeSendButton = true;
+     pipeline.preRender.push(() => {
+      uuids.btns.send = $id();
+      uuids.rows.forEach(row => row.record.send = $id())
+    })
+     pipeline.postRender.push(() => {
+      uuids.rows.forEach((row, index) => {
+        $el(row.record.send).addEventListener('click', () => onClickSend(callback, index))
+      })
+      if (config.includeBatchActions) {
+        $el(uuids.btns.send).addEventListener('click', () => onClickBatchSend(callback))
+   } })
+
+   return this;
+  }
+
+  function onClickBatchSend(callback){
+     getSelectedRecords().forEach(record => {
+      const updatedRecord = {"tid": record.tid, ...transposeRecord(record)}
+      callback(updatedRecord);
+     });
+
+  }
+
+  function onClickSend(callback, index){
+      const record = dataArray[index];
+      const updatedRecord = {"tid": record.tid, ...transposeRecord(record)};
+      callback(updatedRecord);
   }
 
 
@@ -453,7 +511,6 @@ function simpleTable(apiClient) {
       $el(uuids.body).innerHTML = dialog.body();
       $el(uuids.title).innerText = dialog.title;
       $el(uuids.accept).innerText = dialog.accept;
-      console.log(dialog.postrender)
       if (dialog.postrender) dialog.postrender();
       dialogPostRenderActions.forEach(action => action())
     }
@@ -525,8 +582,11 @@ function simpleTable(apiClient) {
   function getBootstrapTableHtml() {
     return `
      ${config.includeSingleRecordActions ? dialogHandler.getDialogHtml() : ""}
+     ${config.includeSearchBars ?`<div class="d-flex flex-row justify-content-start"> 
+     ${$cols().map(column => `<input type="text" id="${uuids.btns.search[column.name]}" placeholder="Search in ${column.name}"/>`).join('')} </div>` : ""}
      ${config.includeBatchActions ? `<div class="d-flex flex-row justify-content-end gap-3">
     ${labels.table.map(label => `<button data-toggle="modal" data-target="#${dialogHandler.getDataTarget()}" id=${uuids.btns[label.key]} type="button" class="btn btn-secondary btn-sm m-1">${label.name}</button>`).join('')} 
+    ${config.includeSendButton ? `<button id=${uuids.btns.send} type="button" class="btn btn-secondary btn-sm m-1">Send</button>` : ""}
     </div>` : ""}
       <table class="${name} table">
         <thead class="${name} tableHead">
@@ -536,7 +596,7 @@ function simpleTable(apiClient) {
             ${$cols().map(column =>
       `<th class="column" scope="col" id="${uuids.columns[column.key]}" ${config.includeClickSortingEvent ? "style='cursor:pointer;'" : ""}>${column.name}</th>`
     ).join('')}
-            ${config.includeSingleRecordActions ? `<th scope='col' colspan="${labels.record.length}" class="text-center">Actions</th>` : ""}
+            ${config.includeSingleRecordActions ? `<th scope='col' colspan="${labels.record.length + 1}" class="text-center">Actions</th>` : ""}
           </tr>
         </thead>
         <tbody>
@@ -549,6 +609,7 @@ function simpleTable(apiClient) {
         labels.record.map(label =>
           `<td><button id="${uuids.rows[index].record[label.key]}" type="button" class="${name} button action ${label.key}" data-toggle="modal" data-target="#${dialogHandler.getDataTarget()}">${label.name}</button></td>`
         ).join('') : ""}
+        ${config.includeSendButton ? `<td><button id="${uuids.rows[index].record.send}" type="button" class="${name} button action send">Send</button></td>` : ""}
             </tr>
           `).join('')}
         </tbody>
@@ -581,7 +642,9 @@ function simpleTable(apiClient) {
     selectProperties,
     referenceColumnsByName,
     referenceColumnsByKey,
-    setInfoColumn
+    setInfoColumn,
+    addSendButton,
+    addSearchBar
   };
 }
 
