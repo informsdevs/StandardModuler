@@ -5,7 +5,8 @@ class DataView {
     _dataViewName = `DataView-${this._globalId++}`
     _propReferencedBy = "key";
     _dataArray;
-    _dialog = new Dialog();
+    _dialog;
+    _recordInfoLabel;
     _properties = [];
     _unitButtons = [];
     _identifier;
@@ -33,6 +34,11 @@ class DataView {
         return this;
     }
 
+    addRecordInfoLabel(recordInfoLabel) {
+        this._recordInfoLabel = recordInfoLabel;
+        return this;
+    }
+
     _getKey(key) {
         return this._getProp(key).key;
     }
@@ -51,14 +57,33 @@ class DataView {
         })
     }
 
+    _updateRecordWithDataKeys(record, id) {
+        const updatedRecord = {};
+        updatedRecord[this._identifier] = id;
+        this._getDialogViewProperties().forEach(prop => {
+            if (record[prop.name]) updatedRecord[prop.key] = record[prop.name];
+        })
+        return updatedRecord;
+    }
+
     editRecord(record, id) {
-        console.log(record);
-        console.log(id)
+        this.apiClient.editRecord(this._updateRecordWithDataKeys(record, id));
+        this._update();
+    }
+
+    deleteRecord(id){
+        this.apiClient.deleteRecord(id)
+    }
+
+    acceptDialog(details){
+        if(details.event === "edit") this.editRecord(details.record, details.id);
+        if(details.event === "delete") this.deleteRecord(details.id);
+        this._update();
     }
 
     addSingleUnitButtons() {
-        this._unitButtons.push(ViewButton, EditButton);
-        this._pipeline.postMount.push(() => this.el.addEventListener("edit", (e) => this.editRecord(e.record, e.id)))
+        this._unitButtons.push({ type: ViewButton, params: [] }, { type: EditButton, params: [] }, { type: DeleteButton, params: [] });
+        this._pipeline.postMount.push(() => this.el.addEventListener("accept", (e) => this.acceptDialog(e.detail)))
         this._dialog = new Dialog();
         return this;
     }
@@ -150,7 +175,7 @@ class DataView {
     }
 
     _showDialog(e) {
-        this._dialog.update(e.dialog)
+        this._dialog.update(e.detail, this._recordInfoLabel)
         this._dialog.postRender();
         this._dialog.show()
     }
@@ -158,7 +183,7 @@ class DataView {
 
     _getDataUnits(...params) {
         return this._dataArray.map((record, index) => {
-            return new this.types.DataUnit(this._getContentList(record), this._getDialogRecord(record), record[this._identifier], index, this._unitButtons, ...params);
+            return new this.types.DataUnit(this._getContentList(record), this._getDialogRecord(record), record[this._identifier], index, record[this._getKey(this._recordInfoLabel)], this._unitButtons, ...params);
         })
     }
 
@@ -245,25 +270,23 @@ class DataUnit extends Component {
     _contentList;
     _record;
     _index;
-    _id
+    _recordId
+    _recordInfoLabel
     _buttons = [];
 
-    constructor(contentList, record, id, index, buttons) {
+    constructor(contentList, record, id, index, recordInfoLabel, buttons) {
         super();
         this._contentList = contentList;
         this._index = index;
         this._record = record;
-        this._id = id;
-        this._buttons = buttons.map(button => new button())
+        this._recordId = id;
+        this._recordInfoLabel = recordInfoLabel
+        this._buttons = buttons.map(button => new button.type(this._record, this._recordId, this._recordInfoLabel, ...button.params))
     }
 
-    attachDialog(e) {
-        e.dialog = new e.dialogType(this._record, e.id = this._id)
-    }
 
     postRender() {
         super.postRender();
-        this._el.addEventListener('showDialog', this.attachDialog.bind(this))
         this._buttons.forEach(btn => btn.postRender());
     }
 }
@@ -294,35 +317,50 @@ class DialogAcceptButton extends Button {
     _record;
     _id;
 
-    constructor(name, eventName) {
+    constructor(name, eventName, record, id) {
         super(name);
         this._eventName = eventName;
+        this._record = record;
+        this._id = id;
     }
 
     onClick() {
-        const acceptEvent = new Event("accept", { bubbles: true })
-        this._el.dispatchEvent(acceptEvent);
+        const acceptEvent = new CustomEvent("accept",
+            {
+                bubbles: true,
+                detail: {
+                    event: this._eventName,
+                    record: this._record,
+                    id: this._id
+                }
+            })
 
-        if (this._eventName) {
-            const updateEvent = new Event(this._eventName, { bubbles: true })
-            this._el.dispatchEvent(updateEvent);
-        }
+        this._el.dispatchEvent(acceptEvent);
     }
 }
 
 class RowButton extends Button {
 
+    _recordId;
     _record;
     _dialogType;
+    _recordInfoLabel;
 
-    constructor(name, dialogType) {
+    constructor(record, id, recordInfoLabel, name, dialogType) {
         super(name);
+        this._record = record;
+        this._recordId = id;
         this._dialogType = dialogType;
+        this._recordInfoLabel = recordInfoLabel;
     }
 
     onClick() {
-        const event = new Event("showDialog", { bubbles: true });
-        event.dialogType = this._dialogType;
+        const event = new CustomEvent("showDialog",
+            {
+                bubbles: true,
+                detail: new this._dialogType(this._record, this._recordId, this._recordInfoLabel)
+            });
+
         this._el.dispatchEvent(event);
     }
 }
@@ -330,23 +368,23 @@ class RowButton extends Button {
 
 class ViewButton extends RowButton {
 
-    constructor() {
-        super("View", ViewDialog)
+    constructor(record, id, label) {
+        super(record, id, label, "View", ViewDialog)
     }
 }
 
 class EditButton extends RowButton {
 
-    constructor() {
-        super("Edit", EditDialog)
+    constructor(record, id, label) {
+        super(record, id, label, "Edit", EditDialog)
     }
 }
 
 
-class DeleteButton extends Button {
+class DeleteButton extends RowButton {
 
-    constructor() {
-        super("Delete")
+    constructor(record, id, label) {
+        super(record, id, label, "Delete", DeleteDialog)
     }
 }
 
@@ -355,9 +393,8 @@ class SendButton extends Button {
     _callback;
     _record;
 
-    constructor(record, id, callback) {
+    constructor(record, id, label, callback) {
         super("Send");
-        console.log(callback)
         this._callback = callback;
         this._record = record;
     }

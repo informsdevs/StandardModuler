@@ -11,6 +11,7 @@ window.addEventListener("DOMContentLoaded", async () => {
 
     await apiClient.resetTestData();
 
+   
     /* const table = simpleTable(apiClient)
         .selectIdentifier("tid")
         .renameColumns(["attribute_1", "Employee Id"], ["attribute_2", "Name"], ["attribute_3", "Client"], ["attribute_4", "Country"], ["attribute_5", "Retailer"], ["attribute_6", "Store"], ["attribute_7", "Academy"], ["attribute_8", "Challenge"], ["attribute_9", "Manual Points"])
@@ -39,6 +40,8 @@ window.addEventListener("DOMContentLoaded", async () => {
         .sortInDescendingOrder("Total")
         .addSingleUnitButtons()
         .addClickSort()
+        .addSendButton(print)
+        .addRecordInfoLabel("Name")
         .mount('#stonortable')
 
 

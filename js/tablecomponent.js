@@ -109,8 +109,8 @@ class Row extends DataUnit {
 
   _includeNumberedRows;
 
-  constructor(contentList, record, id, index, buttons, includeNumberedRows) {
-    super(contentList, record, id,  index, buttons)
+  constructor(contentList, record, id, index, label, buttons, includeNumberedRows) {
+    super(contentList, record, id,  index, label, buttons)
     this._includeNumberedRows = includeNumberedRows;
   }
 

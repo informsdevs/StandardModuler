@@ -71,9 +71,9 @@ async function platformccApiClient(auth) {
     });
   }
 
-  async function deleteRecord(record) {
+  async function deleteRecord(id) {
 
-    const url = `${auth.url}/${record.tid}`;
+    const url = `${auth.url}/${id}`;
 
     const response = await fetch(url, {
       method: "DELETE",
