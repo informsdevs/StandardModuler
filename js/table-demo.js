@@ -37,7 +37,6 @@ window.addEventListener("DOMContentLoaded", async () => {
         .selectDialogViewProperties("Employee Id", "Name", "Client", "Country", "Retailer", "Store", "Academy", "Challenge", "Manual Points", "Total")
         .addNumberedRows()
         .sortInDescendingOrder("Total")
-        .addSingleUnitButtons()
         .addClickSort()
         .mount('#stonortable')
 

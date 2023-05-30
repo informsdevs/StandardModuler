@@ -1,14 +1,69 @@
-class DataView {
+class Component {
+
+    el;
+    _childMountIds = {};
+    _eventListeners;
+
+
+    create(){
+        this.generateChildIds();
+        this.generateChildComponents();
+        this.el ? this.updateElement : this.generateElement();
+        this.mountChildComponents();
+        this.addEventListeners();
+    }
+
+    generateChildIds() {
+        Object.keys(this.childComponents).forEach(component =>
+            this._childMountIds[component] = uuid.v4())
+    }
+
+    generateElement() {
+        const div = document.createElement('div');
+        div.innerHTML = this.html;
+        this.el = div.querySelector(this.label);
+    }
+
+    updateElement(){
+        this.el.innerHTML = this.html;
+    }
+
+    mountChildComponents() {
+        Object.entries(this.childComponents).forEach(([name, components]) => {
+            const mountEl = this.el.querySelector(`#${this._childMountIds[name]}`)
+            mountEl.replaceWith([...components]).map(component => {
+                component.create()
+                return component.el
+            }).join('')
+        })
+    }
+
+
+    addEventListeners() {
+        this._eventListeners.forEach(listener => {
+            this.el.addEventListener(listener.type, listener.callback);
+        })
+
+    }
+
+    getChildMountId(child) {
+        return this._childMountIds[child];
+    }
+}
+
+
+class DataView extends Component {
 
     static _globalId = 1;
 
     _dataViewName = `DataView-${this._globalId++}`
     _propReferencedBy = "key";
     _dataArray;
-    _dialog = new Dialog();
+    _dialog;
     _properties = [];
     _unitButtons = [];
     _identifier;
+    _generateAsTable = true;
     _pipeline = {
         postFetch: [],
         preRender: [],
@@ -18,6 +73,7 @@ class DataView {
     }
 
     constructor(apiClient, types) {
+        super();
         this.apiClient = apiClient;
         this.types = types;
         this._initializeProperties();
@@ -51,9 +107,10 @@ class DataView {
         })
     }
 
-    editRecord(record, id) {
-        console.log(record);
-        console.log(id)
+    async editRecord(record, id) {
+        record[this._identifier] = id;
+        await this.apiClient.editRecord(record);
+        this._update()
     }
 
     addSingleUnitButtons() {
@@ -61,6 +118,10 @@ class DataView {
         this._pipeline.postMount.push(() => this.el.addEventListener("edit", (e) => this.editRecord(e.record, e.id)))
         this._dialog = new Dialog();
         return this;
+    }
+
+    generateAsTable() {
+
     }
 
     selectIdentifier(id) {
@@ -209,12 +270,8 @@ class DataView {
         this._postFetch();
         if (event) event()
         this._preRender();
-        this.el.innerHTML = this.html();
+        this.create();
         this._postRender();
-    }
-
-    html() {
-        return `${this._dialog ? this._dialog.html() : ""}`;
     }
 
 }
@@ -230,7 +287,7 @@ class Property {
     }
 }
 
-class Component {
+class Component3 {
     _id = `viewid-${uuid.v4()}`
     _el;
 
@@ -240,7 +297,9 @@ class Component {
 }
 
 
-class DataUnit extends Component {
+
+
+class DataUnit {
 
     _contentList;
     _record;
@@ -249,7 +308,6 @@ class DataUnit extends Component {
     _buttons = [];
 
     constructor(contentList, record, id, index, buttons) {
-        super();
         this._contentList = contentList;
         this._index = index;
         this._record = record;
@@ -265,6 +323,10 @@ class DataUnit extends Component {
         super.postRender();
         this._el.addEventListener('showDialog', this.attachDialog.bind(this))
         this._buttons.forEach(btn => btn.postRender());
+    }
+
+    get html() {
+        return `<data-unit-component contentList="${this._contentList}" index="`
     }
 }
 
@@ -357,7 +419,6 @@ class SendButton extends Button {
 
     constructor(record, id, callback) {
         super("Send");
-        console.log(callback)
         this._callback = callback;
         this._record = record;
     }

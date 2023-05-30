@@ -1,15 +1,24 @@
 class Table extends DataView {
 
-  _columns = [];
-  _rows = [];
   _includeNumberedRows = false;
   _includeClickSort = false;
   _sortedInDescendingOrder = true;
+  childComponents = {columns : []}
 
   constructor(apiClient) {
     super(apiClient, { "DataUnit": Row, "Property": Column })
   }
 
+
+  get label(){
+    return "table";
+  }
+
+  generateChildComponents(){
+    this.childComponents.columns = this._generateColumns();
+  //  this._childComponents.rows = this._generateRows();
+  }
+  
   _preMount() {
     super._preMount();
     this._generateColumns();
@@ -25,12 +34,6 @@ class Table extends DataView {
     this.el.addEventListener('sort', (e) => this._sortColumns(e.column))
   }
 
-  _postRender() {
-    super._postRender();
-    this._columns.forEach(column => column.postRender());
-    this._rows.forEach(row => row.postRender());
-    this._dialog.postRender();
-  }
 
   _sortColumns(column) {
     this._sortedInDescendingOrder = !this._sortedInDescendingOrder;
@@ -56,26 +59,28 @@ class Table extends DataView {
   }
 
 
-  html() {
-    return super.html().concat(`
+  get html() {
+    return `
       <table class="table">
         <thead>
           <tr>
             ${this._includeNumberedRows ? "<th scope='col'>#</th>" : ""}
-            ${this._columns.map(column => column.html()).join('')}
+            ${`<div id="${this.getChildMountId("columns")}"> </div>`}
             ${this._unitButtons.length > 0 ? `<th scope='col' colspan="${this._unitButtons.length}">Actions</th>` : ""} 
           </tr>
         </thead>
         <tbody>
-          ${this._rows.map(row => row.html()).join('')}
+        ${`<div id="${this.getChildMountId("rows")}"> </div>`}
         </tbody>
       </table>
-    `);
+    `;
   }
 
 }
 
 class Column extends Component {
+
+  label = "th";
 
   constructor({ key, name, type, readonly }, includeClickSort) {
     super();
