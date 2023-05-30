@@ -257,10 +257,14 @@ class Property {
 
 class Component {
     _id = `viewid-${uuid.v4()}`
-    _el;
+    _test = "test"
+    
+    get _el(){
+       return document.getElementById(this._id);
+    }
 
     postRender() {
-        this._el = document.getElementById(this._id);
+        
     }
 }
 
@@ -315,13 +319,13 @@ class DialogAcceptButton extends Button {
 
     _eventName;
     _record;
-    _id;
+    _recordId;
 
     constructor(name, eventName, record, id) {
         super(name);
         this._eventName = eventName;
         this._record = record;
-        this._id = id;
+        this._recordId = id;
     }
 
     onClick() {
@@ -330,8 +334,7 @@ class DialogAcceptButton extends Button {
                 bubbles: true,
                 detail: {
                     event: this._eventName,
-                    record: this._record,
-                    id: this._id
+                    id: this._recordId
                 }
             })
 

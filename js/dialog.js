@@ -23,9 +23,10 @@ class Dialog extends Component {
         document.getElementById(this._accept).innerHTML = this._acceptButton.html();
     }
 
-    onAccept(e){
-        if(this._table) e.detail.record = this._table.input;
-        this._modal.hide()     
+    onAccept(e) {
+        if (this._table && !this._table.readonly)
+            e.detail.record = this._table.input;
+        this._modal.hide()
     }
 
     postRender() {

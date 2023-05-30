@@ -29,7 +29,6 @@ class Table extends DataView {
     super._postRender();
     this._columns.forEach(column => column.postRender());
     this._rows.forEach(row => row.postRender());
-    this._dialog.postRender();
   }
 
   _sortColumns(column) {
