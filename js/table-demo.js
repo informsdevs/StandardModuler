@@ -34,7 +34,7 @@ window.addEventListener("DOMContentLoaded", async () => {
         .referencePropByName()
         .changePropertyTypes(["Academy", "Challenge", "Manual Points"], "number")
         .addSumProperty(["Academy", "Challenge", "Manual Points"], "Total")
-        .selectMainViewProperties("Name", "Academy", "Challenge", "Manual Points", "Total")
+        .selectMainViewProperties("Name", "Client", "Academy", "Challenge", "Manual Points", "Total")
         .selectDialogViewProperties("Employee Id", "Name", "Client", "Country", "Retailer", "Store", "Academy", "Challenge", "Manual Points", "Total")
         .addNumberedRows()
         .sortInDescendingOrder("Total")
@@ -42,6 +42,7 @@ window.addEventListener("DOMContentLoaded", async () => {
         .addClickSort()
         .addSendButton(print)
         .addRecordInfoLabel("Name")
+        .addSearchFields("Name", "Client")
         .mount('#stonortable')
 
 

@@ -1,10 +1,10 @@
 class Table extends DataView {
 
   _columns = [];
-  _rows = [];
   _includeNumberedRows = false;
   _includeClickSort = false;
   _sortedInDescendingOrder = true;
+  _includeTableButtons = false;
 
   constructor(apiClient) {
     super(apiClient, { "DataUnit": Row, "Property": Column })
@@ -13,11 +13,7 @@ class Table extends DataView {
   _preMount() {
     super._preMount();
     this._generateColumns();
-  }
-
-  _preRender(){
-    super._preRender();
-    this._generateRows();
+    this.dataUnitParams = [this._includeNumberedRows, this._includeTableButtons]
   }
 
   _postMount() {
@@ -28,7 +24,11 @@ class Table extends DataView {
   _postRender() {
     super._postRender();
     this._columns.forEach(column => column.postRender());
-    this._rows.forEach(row => row.postRender());
+  }
+
+  _postRenderTable(){
+    super._postRenderTable();
+    this._columns.forEach(column => column.postRender());
   }
 
   _sortColumns(column) {
@@ -41,11 +41,17 @@ class Table extends DataView {
   }
 
   _generateRows(){
-    this._rows = this._getDataUnits(this._includeNumberedRows);
+    this._rows = this._dataUnits.map(dataUnit => new Row(dataUnit, this._includeNumberedRows, this._includeTableButtons))
   }
 
   addNumberedRows() {
     this._includeNumberedRows = true;
+    return this;
+  }
+
+  addTableButtons(){
+    if(!this._dialog) this._dialog = new Dialog();
+    this._includeTableButtons = true;
     return this;
   }
 
@@ -56,8 +62,8 @@ class Table extends DataView {
 
 
   html() {
-    return super.html().concat(`
-      <table class="table">
+    return `
+      <table id=${this._dataViewName} class="table">
         <thead>
           <tr>
             ${this._includeNumberedRows ? "<th scope='col'>#</th>" : ""}
@@ -66,10 +72,12 @@ class Table extends DataView {
           </tr>
         </thead>
         <tbody>
-          ${this._rows.map(row => row.html()).join('')}
+          ${this._dataUnits.map((row, index) =>{ 
+            row.index = index;
+            return row.html()}).join('')}
         </tbody>
       </table>
-    `);
+    `;
   }
 
 }
@@ -107,22 +115,35 @@ class Column extends Component {
 class Row extends DataUnit {
 
   _includeNumberedRows;
+  _includeCheckBox;
 
-  constructor(contentList, record, id, index, label, buttons, includeNumberedRows) {
-    super(contentList, record, id,  index, label, buttons)
+  constructor(contentList, record, recordId, index, recordInfoLabel, buttons, includeNumberedRows, includeCheckBox) {
+    super(contentList, record, recordId,  index, recordInfoLabel, buttons)
     this._includeNumberedRows = includeNumberedRows;
+    this._includeCheckBox = includeCheckBox;
   }
 
   html() {
     return `<tr id="${this._id}">
-     ${this._includeNumberedRows ? `<th scope='row'>${this._index + 1}</th>` : ""}
-     ${this._contentList.map(content => `<td>${content ?? ""}</td>`).join('')}
-     ${this._buttons.map(button => `<td>${button.html()}</td>`).join('')}
+    ${this._includeCheckBox ? `<th> <input type='checkbox' id="" style='cursor:pointer'/></th>` : ""}
+     ${this._includeNumberedRows ? `<th scope='row'>${this.index + 1}</th>` : ""}
+     ${this.contentList.map(content => `<td>${content ?? ""}</td>`).join('')}
+     ${this.buttons.map(button => `<td>${button.html()}</td>`).join('')}
      </tr>`
   }
 
 }
 
+
+class CheckBox extends Component {
+
+
+
+  get html(){ 
+    return `<input type='checkbox' id="${this._id}" style='cursor:pointer'/>`
+  }
+   
+}
 
 
 

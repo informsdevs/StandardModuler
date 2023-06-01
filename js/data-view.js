@@ -7,8 +7,10 @@ class DataView {
     _dataArray;
     _dialog;
     _recordInfoLabel;
+    _dataUnits = [];
     _properties = [];
     _unitButtons = [];
+    _searchFields = [];
     _identifier;
     _pipeline = {
         postFetch: [],
@@ -71,20 +73,20 @@ class DataView {
         this._update();
     }
 
-    deleteRecord(id){
+    deleteRecord(id) {
         this.apiClient.deleteRecord(id)
     }
 
-    acceptDialog(details){
-        if(details.event === "edit") this.editRecord(details.record, details.id);
-        if(details.event === "delete") this.deleteRecord(details.id);
+    acceptDialog(details) {
+        if (details.event === "edit") this.editRecord(details.record, details.id);
+        if (details.event === "delete") this.deleteRecord(details.id);
         this._update();
     }
 
     addSingleUnitButtons() {
         this._unitButtons.push({ type: ViewButton, params: [] }, { type: EditButton, params: [] }, { type: DeleteButton, params: [] });
         this._pipeline.postMount.push(() => this.el.addEventListener("accept", (e) => this.acceptDialog(e.detail)))
-        this._dialog = new Dialog();
+        if (!this._dialog) this._dialog = new Dialog();
         return this;
     }
 
@@ -147,6 +149,16 @@ class DataView {
         return this;
     }
 
+    addSearchField(property) {
+        this._searchFields.push(new SearchField(this._getProp(property)));
+        return this;
+    }
+
+    addSearchFields(...properties) {
+        properties.forEach(prop => this.addSearchField(prop));
+        return this;
+    }
+
 
     _getMainViewProperties() {
         return this._properties.filter(prop => prop.mainView);
@@ -180,11 +192,33 @@ class DataView {
         this._dialog.show()
     }
 
+    _getRecordById(id) {
+        return this._dataArray.find(record => record[this._identifier] === id);
+    }
 
     _getDataUnits(...params) {
         return this._dataArray.map((record, index) => {
             return new this.types.DataUnit(this._getContentList(record), this._getDialogRecord(record), record[this._identifier], index, record[this._getKey(this._recordInfoLabel)], this._unitButtons, ...params);
         })
+    }
+
+    _generateDataUnits() {
+        this._dataUnits = this._dataArray.map((record, index) => {
+            return new this.types.DataUnit(this._getContentList(record), this._getDialogRecord(record), record[this._identifier], index, record[this._getKey(this._recordInfoLabel)], this._unitButtons, ...this.dataUnitParams);
+        })
+    }
+
+    _search() {
+        const event = {
+            postprerender: true,
+            handle: () => this._dataUnits = this._dataUnits.filter(unit =>
+                this._searchFields.every(field => {
+                    const fieldValue = this._getRecordById(unit.recordId)[field.property.key];
+                    return fieldValue.toUpperCase().includes(field.searchPhrase.toUpperCase());
+                })
+            )
+        }
+        this._update(event);
     }
 
     _initializeProperties() {
@@ -207,6 +241,7 @@ class DataView {
 
     _preRender() {
         this._pipeline.preRender.forEach(event => event());
+        this._generateDataUnits();
     }
 
     _preMount() {
@@ -216,30 +251,49 @@ class DataView {
     _postMount() {
         this._pipeline.postMount.forEach(event => event());
         if (this._dialog) this.el.addEventListener('showDialog', this._showDialog.bind(this))
+        this.el.addEventListener('search', this._search.bind(this))
     }
 
     _postRender() {
         this._pipeline.postRender.forEach(event => event());
+        this._searchFields.forEach(field => field.postRender())
+        this._dataUnits.forEach(unit => unit.postRender())
     }
 
-    mount(id) {
+    _postRenderTable() {
+        this._dataUnits.forEach(unit => unit.postRender())
+    }
+
+    render() {
+        document.getElementById(this._dataViewName).innerHTML = this.html();
+    }
+
+    async mount(id) {
         this._preMount();
         this.el = document.querySelector(id);
         this._postMount();
-        this._update();
-    }
-
-    async _update(event) {
         await this._fetchData();
         this._postFetch();
-        if (event) event()
         this._preRender();
-        this.el.innerHTML = this.html();
+        this.el.innerHTML = this.fullHtml();
         this._postRender();
     }
 
-    html() {
-        return `${this._dialog ? this._dialog.html() : ""}`;
+    async _update(event) {
+        if (event?.preprerender) event.handle()
+        this._preRender();
+        if (event?.postprerender) event.handle()
+        document.getElementById(this._dataViewName).innerHTML = this.html();
+        this._postRenderTable();
+    }
+
+    fullHtml() {
+        return `${this._dialog ? this._dialog.html() : ""}
+                ${this._searchFields.length > 0 ?
+                `<div class="d-flex flex-row justify-content-start"> 
+                ${this._searchFields.map(field => field.html).join('')} 
+                </div>` : ""}
+                 ${this.html()}`;
     }
 
 }
@@ -257,42 +311,78 @@ class Property {
 
 class Component {
     _id = `viewid-${uuid.v4()}`
-    _test = "test"
-    
-    get _el(){
-       return document.getElementById(this._id);
+
+    get _el() {
+        return document.getElementById(this._id);
     }
 
     postRender() {
-        
+
     }
 }
 
 
 class DataUnit extends Component {
 
-    _contentList;
-    _record;
-    _index;
-    _recordId
-    _recordInfoLabel
-    _buttons = [];
+    contentList;
+    record;
+    index;
+    recordId
+    recordInfoLabel
+    buttonBluePrints = []
+    buttons = [];
 
     constructor(contentList, record, id, index, recordInfoLabel, buttons) {
         super();
-        this._contentList = contentList;
-        this._index = index;
-        this._record = record;
-        this._recordId = id;
-        this._recordInfoLabel = recordInfoLabel
-        this._buttons = buttons.map(button => new button.type(this._record, this._recordId, this._recordInfoLabel, ...button.params))
+        this.contentList = contentList;
+        this.index = index;
+        this.record = record;
+        this.recordId = id;
+        this.recordInfoLabel = recordInfoLabel
+        this.buttons = buttons.map(button => new button.type(this.record, this.recordId, this.recordInfoLabel, ...button.params))
     }
 
 
     postRender() {
         super.postRender();
-        this._buttons.forEach(btn => btn.postRender());
+        this.buttons.forEach(btn => btn.postRender());
     }
+}
+
+class SearchField extends Component {
+
+    _property;
+
+    constructor(property) {
+        super();
+        this._property = property;
+    }
+
+    postRender() {
+        this._el.addEventListener('keyup', this.onKeyUp.bind(this))
+    }
+
+    onKeyUp() {
+        console.log(this._el.value);
+        const event = new CustomEvent("search", {
+            bubbles: true
+        })
+
+        this._el.dispatchEvent(event)
+    }
+
+    get property() {
+        return this._property;
+    }
+
+    get searchPhrase() {
+        return this._el.value;
+    }
+
+    get html() {
+        return `<input type="text" id=${this._id} placeholder="Search by ${this._property.name}"/>`
+    }
+
 }
 
 class Button extends Component {
