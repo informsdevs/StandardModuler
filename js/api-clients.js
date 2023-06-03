@@ -81,11 +81,11 @@ async function platformccApiClient(auth) {
     });
   }
 
-  async function deleteRecords(records) {
+  async function deleteRecords(ids) {
 
-    const ids = records.map(record => record.tid).join(",");
+    const idString = ids.join(",");
 
-    const url = `${auth.url}/${ids}`;
+    const url = `${auth.url}/${idString}`;
 
     const response = await fetch(url, {
       method: "DELETE",

@@ -43,6 +43,7 @@ window.addEventListener("DOMContentLoaded", async () => {
         .addSendButton(print)
         .addRecordInfoLabel("Name")
         .addSearchFields("Name", "Client")
+        .addTableButtons()
         .mount('#stonortable')
 
 

@@ -4,7 +4,6 @@ class Dialog extends Component {
     _table;
     _acceptButton;
     _dialog
-    _recordInfoLabel;
     _body = uuid.v4();
     _title = uuid.v4();
     _accept = uuid.v4();
@@ -17,7 +16,6 @@ class Dialog extends Component {
         this._dialog = dialog;
         this._table = dialog.table;
         this._acceptButton = dialog.accept;
-        this._recordInfoLabel;
         document.getElementById(this._title).innerText = dialog.title;
         document.getElementById(this._body).innerHTML = dialog.html;
         document.getElementById(this._accept).innerHTML = this._acceptButton.html();
@@ -30,7 +28,6 @@ class Dialog extends Component {
     }
 
     postRender() {
-        super.postRender();
         this._el.addEventListener("accept", this.onAccept.bind(this))
         this._table?.postRender();
         this._acceptButton?.postRender();
@@ -150,6 +147,34 @@ class DeleteDialog {
 
 }
 
+class BatchDeleteDialog {
+
+    _records
+    _ids
+    _labels
+
+    constructor(records, ids, labels) {
+        this._records = records;
+        this._ids = ids;
+        this._labels = labels;
+    }
+
+    get title() {
+        return "Delete records"
+    }
+
+    get accept() {
+        return new DialogAcceptButton("Confirm", "batchdDelete", this._records, this._ids)
+    }
+
+    get html(){
+        const lastLabel = this._labels.pop();
+        return `Are you sure you want to delete ${this._labels.join(', ')} and ${lastLabel}?` 
+    }
+
+
+}
+
 
 class InputField extends Component {
 
@@ -219,8 +244,10 @@ class DialogRow {
 class DialogTable {
 
     _rows;
+    _readonly
 
     constructor(record, fillOut, readonly, includeCheck) {
+        this._readonly = readonly;
         this._rows = record.map(attr => new DialogRow(attr, fillOut, readonly, includeCheck))
     }
 
@@ -232,6 +259,10 @@ class DialogTable {
         const record = {};
         this._rows.forEach(row => record[row.name] = row.input)
         return record;
+    }
+
+    get readonly(){
+        return this._readonly
     }
 
     get html() {

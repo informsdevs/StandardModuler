@@ -17,6 +17,7 @@ class DataView {
         preRender: [],
         preMount: [],
         postMount: [],
+        mountPostRender: [],
         postRender: []
     }
 
@@ -54,8 +55,8 @@ class DataView {
     }
 
     _sort(property, descending) {
-        this._dataArray.sort((a, b) => {
-            return a[this._getKey(property)] >= b[this._getKey(property)] && descending || a[this._getKey(property)] < b[this._getKey(property)] && !descending ? -1 : 1;
+        this._dataUnits.sort((a, b) => {
+            return a.record[this._getKey(property)] >= b.record[this._getKey(property)] && descending || a.record[this._getKey(property)] < b.record[this._getKey(property)] && !descending ? -1 : 1;
         })
     }
 
@@ -68,25 +69,23 @@ class DataView {
         return updatedRecord;
     }
 
-    editRecord(record, id) {
-        this.apiClient.editRecord(this._updateRecordWithDataKeys(record, id));
-        this._update();
+    async editRecord(record, id) {
+        await this.apiClient.editRecord(this._updateRecordWithDataKeys(record, id));
     }
 
-    deleteRecord(id) {
-        this.apiClient.deleteRecord(id)
+    async deleteRecord(id) {
+        await this.apiClient.deleteRecord(id)
     }
 
-    acceptDialog(details) {
-        if (details.event === "edit") this.editRecord(details.record, details.id);
-        if (details.event === "delete") this.deleteRecord(details.id);
-        this._update();
+    async acceptDialog(details) {
+        if (details.event === "edit") await this.editRecord(details.record, details.id);
+        if (details.event === "delete") await this.deleteRecord(details.id);
+        this._update(0);
     }
 
     addSingleUnitButtons() {
         this._unitButtons.push({ type: ViewButton, params: [] }, { type: EditButton, params: [] }, { type: DeleteButton, params: [] });
-        this._pipeline.postMount.push(() => this.el.addEventListener("accept", (e) => this.acceptDialog(e.detail)))
-        if (!this._dialog) this._dialog = new Dialog();
+        this._initializeDialog();
         return this;
     }
 
@@ -149,14 +148,31 @@ class DataView {
         return this;
     }
 
+    _initializeSearchFields() {
+        this._pipeline.preRender.push(() => this._search());
+        this._pipeline.mountPostRender.push(() => this.el.addEventListener('search', () => this._update(1)));
+    }
+
     addSearchField(property) {
         this._searchFields.push(new SearchField(this._getProp(property)));
+        this._initializeSearchFields();
+
         return this;
     }
 
     addSearchFields(...properties) {
-        properties.forEach(prop => this.addSearchField(prop));
+        properties.forEach(prop => this._searchFields.push(new SearchField(this._getProp(prop))));
+        this._initializeSearchFields();
         return this;
+    }
+
+    _initializeDialog() {
+        if (!this._dialog) {
+            this._dialog = new Dialog();
+            this._pipeline.postMount.push(
+                () => this.el.addEventListener("accept", (e) => this.acceptDialog(e.detail)),
+                () => this.el.addEventListener('showDialog', (e) => this._showDialog(e.detail)))
+        }
     }
 
 
@@ -186,8 +202,9 @@ class DataView {
         return contentList;
     }
 
-    _showDialog(e) {
-        this._dialog.update(e.detail, this._recordInfoLabel)
+    _showDialog(dialog) {
+        console.log(dialog)
+        this._dialog.update(dialog)
         this._dialog.postRender();
         this._dialog.show()
     }
@@ -204,28 +221,23 @@ class DataView {
 
     _generateDataUnits() {
         this._dataUnits = this._dataArray.map((record, index) => {
-            return new this.types.DataUnit(this._getContentList(record), this._getDialogRecord(record), record[this._identifier], index, record[this._getKey(this._recordInfoLabel)], this._unitButtons, ...this.dataUnitParams);
+            return new this.types.DataUnit(this._getContentList(record), this._getDialogRecord(record), record[this._identifier], index, record[this._getKey(this._recordInfoLabel)], this._unitButtons, record, ...this.dataUnitParams);
         })
     }
 
     _search() {
-        const event = {
-            postprerender: true,
-            handle: () => this._dataUnits = this._dataUnits.filter(unit =>
-                this._searchFields.every(field => {
-                    const fieldValue = this._getRecordById(unit.recordId)[field.property.key];
-                    return fieldValue.toUpperCase().includes(field.searchPhrase.toUpperCase());
-                })
-            )
-        }
-        this._update(event);
+        this._dataUnits = this._dataUnits.filter(unit =>
+            this._searchFields.every(field => {
+                return this._getRecordById(unit.recordId)[field.property.key].toUpperCase().includes(field.searchPhrase.toUpperCase());
+            })
+        )
     }
 
     _initializeProperties() {
         this._properties = this.apiClient.getMetaData().map(prop => new Property(prop.key, prop.key, prop.type, true, true, false));
     }
 
-    async _fetchData() {
+    async _fetch() {
         this._dataArray = await this.apiClient.getAllRecords();
     }
 
@@ -237,11 +249,11 @@ class DataView {
     _postFetch() {
         this._typeCastData();
         this._pipeline.postFetch.forEach(event => event());
+        this._generateDataUnits();
     }
 
     _preRender() {
         this._pipeline.preRender.forEach(event => event());
-        this._generateDataUnits();
     }
 
     _preMount() {
@@ -250,21 +262,18 @@ class DataView {
 
     _postMount() {
         this._pipeline.postMount.forEach(event => event());
-        if (this._dialog) this.el.addEventListener('showDialog', this._showDialog.bind(this))
-        this.el.addEventListener('search', this._search.bind(this))
+    }
+
+    _mountPostRender() {
+        this._pipeline.mountPostRender.forEach(event => event());
+        this._searchFields.forEach(field => field.postRender())
     }
 
     _postRender() {
-        this._pipeline.postRender.forEach(event => event());
-        this._searchFields.forEach(field => field.postRender())
         this._dataUnits.forEach(unit => unit.postRender())
     }
 
-    _postRenderTable() {
-        this._dataUnits.forEach(unit => unit.postRender())
-    }
-
-    render() {
+    _render() {
         document.getElementById(this._dataViewName).innerHTML = this.html();
     }
 
@@ -272,28 +281,34 @@ class DataView {
         this._preMount();
         this.el = document.querySelector(id);
         this._postMount();
-        await this._fetchData();
+        await this._fetch();
         this._postFetch();
         this._preRender();
         this.el.innerHTML = this.fullHtml();
+        this._mountPostRender();
         this._postRender();
     }
 
-    async _update(event) {
-        if (event?.preprerender) event.handle()
-        this._preRender();
-        if (event?.postprerender) event.handle()
-        document.getElementById(this._dataViewName).innerHTML = this.html();
-        this._postRenderTable();
+    async _update(step, event) {
+
+        const steps = [this._fetch.bind(this), this._postFetch.bind(this), this._preRender.bind(this), this._render.bind(this), this._postRender.bind(this)]
+
+        await steps[step]();
+        if (event) event();
+
+        steps.slice(step + 1).forEach(async func => {
+            func();
+        })
+
     }
 
-    fullHtml() {
+
+    html() {
         return `${this._dialog ? this._dialog.html() : ""}
                 ${this._searchFields.length > 0 ?
                 `<div class="d-flex flex-row justify-content-start"> 
                 ${this._searchFields.map(field => field.html).join('')} 
-                </div>` : ""}
-                 ${this.html()}`;
+                </div>` : ""}`;
     }
 
 }
@@ -325,26 +340,26 @@ class Component {
 class DataUnit extends Component {
 
     contentList;
-    record;
+    dialogRecord;
     index;
+    record;
     recordId
     recordInfoLabel
-    buttonBluePrints = []
     buttons = [];
 
-    constructor(contentList, record, id, index, recordInfoLabel, buttons) {
+    constructor(contentList, dialogRecord, id, index, recordInfoLabel, buttons, record) {
         super();
         this.contentList = contentList;
         this.index = index;
+        this.dialogRecord = dialogRecord;
         this.record = record;
         this.recordId = id;
         this.recordInfoLabel = recordInfoLabel
-        this.buttons = buttons.map(button => new button.type(this.record, this.recordId, this.recordInfoLabel, ...button.params))
+        this.buttons = buttons.map(button => new button.type(this.dialogRecord, this.recordId, this.recordInfoLabel, ...button.params))
     }
 
 
     postRender() {
-        super.postRender();
         this.buttons.forEach(btn => btn.postRender());
     }
 }
@@ -363,7 +378,6 @@ class SearchField extends Component {
     }
 
     onKeyUp() {
-        console.log(this._el.value);
         const event = new CustomEvent("search", {
             bubbles: true
         })
@@ -376,7 +390,7 @@ class SearchField extends Component {
     }
 
     get searchPhrase() {
-        return this._el.value;
+        return this._el?.value ?? "";
     }
 
     get html() {
