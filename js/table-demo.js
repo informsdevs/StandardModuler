@@ -2,9 +2,9 @@
 window.addEventListener("DOMContentLoaded", async () => {
 
     const auth = {
-        url: "https://in.informs.dk/api/api.php/records/platformcc6831243_tokens_793524",
-        user: "dfhapiuser",
-        password: "5M7MydYzwIChC2kXfQJtIoGARJyrGeLFj6UzEK85"
+        url: "",
+        user: "",
+        password: ""
     }
 
     const apiClient = await platformccApiClient(auth);
