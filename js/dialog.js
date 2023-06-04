@@ -147,6 +147,43 @@ class DeleteDialog {
 
 }
 
+class AddRecordDialog {
+
+    _record
+    _table
+    _id
+
+
+    constructor(record, id) {
+        this._record = record;
+        this._id = id;
+        this._table = new DialogTable(this._record, true, false, false);
+    }
+
+    get title() {
+        return "Add record"
+    }
+
+    get accept() {
+        return new DialogAcceptButton("Save", "add", this._record, this._id)
+    }
+
+    get id() {
+        return this._id;
+    }
+
+    get table() {
+        return this._table;
+    }
+
+    get html() {
+        return this._table.html
+    }
+
+
+}
+
+
 class BatchDeleteDialog {
 
     _records
@@ -176,6 +213,39 @@ class BatchDeleteDialog {
 }
 
 
+class BatchEditDialog {
+
+    _records
+    _ids
+    _labels
+    _table
+
+    constructor(records, ids, labels) {
+        this._records = records;
+        this._ids = ids;
+        this._labels = labels;
+        this._table = new DialogTable(this._records[0], false, false, true);
+    }
+
+    get title() {
+        return "Edit records"
+    }
+
+    
+    get accept() {
+        return new DialogAcceptButton("Save", "batchEdit", this._records, this._ids)
+    }
+
+    get table() {
+        return this._table;
+    }
+
+    get html() {
+        return this._table.html
+    }
+
+}
+
 class InputField extends Component {
 
     _data;
@@ -193,8 +263,16 @@ class InputField extends Component {
         this._data = data;
     }
 
-    postRender() {
-        super.postRender();
+    disable(){
+        this._el.disabled = true;
+    }
+
+    enable(){
+        this._el.disabled = false;
+    }
+
+    get disabled(){
+        return this._el.disabled;
     }
 
     get input() {
@@ -206,7 +284,7 @@ class InputField extends Component {
     }
 }
 
-class DialogRow {
+class DialogRow extends Component{
 
     _attr
     _fillOut
@@ -215,14 +293,29 @@ class DialogRow {
     _inputField
 
     constructor(attr, fillOut, readonly, includeCheck) {
+        super();
         this._readonly = readonly;
         this._attr = attr;
-        if (!readonly)
+        if (!readonly && !includeCheck)
             this._inputField = new InputField(attr.name, attr.data, attr.type, attr.readonly, fillOut)
+        if (includeCheck){
+            this._inputField = new InputField(attr.name, attr.data, attr.type, true, fillOut)
+            this._checkBox = new CheckBox();
+        }
     }
 
     postRender() {
-        this._inputField?.postRender();
+        this._el.addEventListener('check', this.onCheck.bind(this))
+        this._checkBox?.postRender();
+    }
+
+    onCheck(e){
+        e.stopPropagation();
+        e.detail.selected ? this._inputField.enable() : this._inputField.disable();
+    }
+
+    get disabled(){
+        return this._inputField.disabled;
     }
 
     get input() {
@@ -234,9 +327,10 @@ class DialogRow {
     }
 
     get html() {
-        return `${this._readonly ?
-            `<tr><td>${this._attr.name}</td><td>${this._attr.data}</td></tr>` :
-            `<tr><td>${this._attr.name}</td><td>${this._inputField.html}</td></tr>`}`
+        return `<tr id="${this._id}"> ${this._checkBox ? `<td>${!this._attr.readonly ? `${this._checkBox.html}` : ""}</td>` : ""}
+        ${this._readonly ?
+            `<td>${this._attr.name}</td><td>${this._attr.data}</td></tr>` :
+            `<td>${this._attr.name}</td><td>${this._inputField.html}</td></tr>`}`
     }
 
 }
@@ -257,7 +351,9 @@ class DialogTable {
 
     get input() {
         const record = {};
-        this._rows.forEach(row => record[row.name] = row.input)
+        this._rows.forEach(row => {
+            if(!row.disabled) record[row.name] = row.input
+        })
         return record;
     }
 

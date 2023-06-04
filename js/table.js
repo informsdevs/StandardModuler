@@ -47,6 +47,8 @@ class Table extends DataView {
     this._rows = this._dataUnits.map(dataUnit => new Row(dataUnit, this._includeNumberedRows, this._includeTableButtons))
   }
 
+
+
   addNumberedRows() {
     this._includeNumberedRows = true;
     return this;
@@ -54,27 +56,68 @@ class Table extends DataView {
 
   addTableButtons() {
     this._initializeDialog();
-    this._tableButtons.push(new TableButton("Add"), new TableButton("Delete", "Batch Delete"), new TableButton("Edit"), new TableButton("Send"));
+    this._tableButtons.push(new DialogTriggerButton("Add", AddRecordDialog), new DialogTriggerButton("Delete", BatchDeleteDialog), new DialogTriggerButton("Edit", BatchEditDialog), new SendButton("Send"));
     this._includeTableButtons = true;
     this._pipeline.mountPostRender.push(
       () => this._tableButtons.forEach(button => button.postRender()),
-      () => this.el.addEventListener('check', (e) => this._selectRecord(e.detail.row, e.detail.selected)));
+      () => this.el.addEventListener('check', (e) => this._selectRecord(e.detail.record, e.detail.selected)));
 
     return this;
   }
 
-  async acceptDialog(details){
-      if(details.event === "batchdDelete") await this.apiClient.deleteRecords(details.id);
-      super.acceptDialog(details);
+  _onSend(e) {
+    e.detail?.record ? super._onSend(e) : this._selectedRecords.forEach(record => this._sendCallback(record));
   }
 
-  _showDialog(type) {
-    console.log(this._selectedRecords.length)
-    if (type === "Batch Delete") {
-      super._showDialog(new BatchDeleteDialog(this._selectedRecords.map(row => row.dialogRecord), this._selectedRecords.map(row => row.recordId), this._selectedRecords.map(row => row.recordInfoLabel)))
-    } else {
 
-    super._showDialog(type);
+  _addIdsToSharedProperties(ids, sharedProperties) {
+    return ids.map(id => { return { [this._identifier]: id, ...sharedProperties } })
+  }
+
+  async editRecords(record, ids) {
+    const sharedProperties = this._updateRecordWithDataKeys(record);
+    const records = this._addIdsToSharedProperties(ids, sharedProperties);
+    await this.apiClient.editRecords(records);
+  }
+
+  async addRecord(record){
+     await this.apiClient.createNewRecord(this._updateRecordWithDataKeys(record))
+  }
+
+  async acceptDialog(details) {
+    if (details.event === "batchdDelete") await this.apiClient.deleteRecords(details.id);
+    if (details.event === "batchEdit") await this.editRecords(details.record, details.id);
+    if (details.event === "add") await this.addRecord(details.record);
+
+    super.acceptDialog(details);
+  }
+
+  _getEmptyDialogRecord(){
+    const record = {};
+    this._getDialogViewProperties().forEach(prop => {
+       record[prop.key] = prop.type === "number" ?  0 : ""
+    })
+    return record;
+  }
+
+  _getDialogBatch() {
+    return {
+      records: this._selectedRecords.map(record => this._getDialogRecord(record)),
+      ids: this._selectedRecords.map(record => record[this._identifier]),
+      labels: this._selectedRecords.map(record => this._getDialogLabel(record))
+    }
+  }
+
+  _showDialog(detail) {
+    if (detail.dialogType === BatchDeleteDialog || detail.dialogType === BatchEditDialog) {
+      const { records, ids, labels } = this._getDialogBatch();
+      const dialog = new detail.dialogType(records, ids, labels);
+      this._updateDialog(dialog);
+    } else if(detail.dialogType === AddRecordDialog){
+      const dialog = new detail.dialogType(this._getDialogRecord(this._getEmptyDialogRecord()));
+      this._updateDialog(dialog);
+    } else {
+      super._showDialog(detail);
     }
   }
 
@@ -151,8 +194,8 @@ class Row extends DataUnit {
   _checkBox;
 
 
-  constructor(contentList, dialogRecord, recordId, index, recordInfoLabel, buttons, record, includeNumberedRows, includeCheckBox) {
-    super(contentList, dialogRecord, recordId, index, recordInfoLabel, buttons, record)
+  constructor(contentList, record, recordId, buttons, includeNumberedRows, includeCheckBox) {
+    super(contentList, record, recordId, buttons)
     this._includeNumberedRows = includeNumberedRows;
     if (includeCheckBox) this._checkBox = new CheckBox();
   }
@@ -161,7 +204,7 @@ class Row extends DataUnit {
     super.postRender();
     if (this._checkBox) {
       this._checkBox.postRender();
-      this._el.addEventListener('check', (e) => e.detail.row = this)
+      this._el.addEventListener('check', (e) => e.detail.record = this._record)
     }
   }
 
@@ -169,7 +212,7 @@ class Row extends DataUnit {
     return `<tr id="${this._id}">
     ${this._checkBox ? `<th> ${this._checkBox.html}</th>` : ""}
      ${this._includeNumberedRows ? `<th scope='row'>${this.index + 1}</th>` : ""}
-     ${this.contentList.map(content => `<td>${content ?? ""}</td>`).join('')}
+     ${this._contentList.map(content => `<td>${content ?? ""}</td>`).join('')}
      ${this.buttons.map(button => `<td>${button.html()}</td>`).join('')}
      </tr>`
   }
@@ -178,32 +221,12 @@ class Row extends DataUnit {
 
 
 
-class TableButton extends Button {
-
-
-  _type
-
-  constructor(name, type) {
-    super(name);
-    this._type = type;
-  }
-
-  onClick() {
-    const event = new CustomEvent('showDialog', {
-      bubbles: true,
-      detail: this._type
-    })
-
-    this._el.dispatchEvent(event);
-  }
-}
-
 
 class CheckBox extends Component {
 
 
   postRender() {
-    this._el.addEventListener('click', this.onClick.bind(this))
+    this._el?.addEventListener('click', this.onClick.bind(this))
   }
 
   onClick() {

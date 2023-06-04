@@ -2,11 +2,12 @@ class DataView {
 
     static _globalId = 1;
 
-    _dataViewName = `DataView-${this._globalId++}`
+    _dataViewName = `DataView-${DataView._globalId++}`
     _propReferencedBy = "key";
     _dataArray;
     _dialog;
     _recordInfoLabel;
+    _sendCallback;
     _dataUnits = [];
     _properties = [];
     _unitButtons = [];
@@ -60,9 +61,8 @@ class DataView {
         })
     }
 
-    _updateRecordWithDataKeys(record, id) {
+    _updateRecordWithDataKeys(record) {
         const updatedRecord = {};
-        updatedRecord[this._identifier] = id;
         this._getDialogViewProperties().forEach(prop => {
             if (record[prop.name]) updatedRecord[prop.key] = record[prop.name];
         })
@@ -70,7 +70,7 @@ class DataView {
     }
 
     async editRecord(record, id) {
-        await this.apiClient.editRecord(this._updateRecordWithDataKeys(record, id));
+        await this.apiClient.editRecord({[this._identifier] : id, ...this._updateRecordWithDataKeys(record)});
     }
 
     async deleteRecord(id) {
@@ -144,8 +144,14 @@ class DataView {
     }
 
     addSendButton(callback) {
-        this._unitButtons.push({ "type": SendButton, params: [callback] })
+        this._unitButtons.push({ "type": SendButton, params: [] })
+        this._sendCallback = callback;
+        this._pipeline.postMount.push(() => this.el.addEventListener('send', this._onSend.bind(this)));
         return this;
+    }
+
+    _onSend(e){
+        this._sendCallback(e.detail.record);
     }
 
     _initializeSearchFields() {
@@ -196,39 +202,48 @@ class DataView {
         return dialogRecords;
     }
 
+
     _getContentList(record) {
         const contentList = [];
         this._getMainViewProperties().forEach(prop => contentList.push(record[prop.key]))
         return contentList;
     }
 
-    _showDialog(dialog) {
-        console.log(dialog)
+    _getDialogLabel(record) {
+        return record[this._getKey(this._recordInfoLabel)]
+    }
+
+    _updateDialog(dialog){
         this._dialog.update(dialog)
         this._dialog.postRender();
         this._dialog.show()
+    
+    }
+
+    _showDialog(detail) {
+        const dialog = new detail.dialogType(this._getDialogRecord(detail.record), detail.recordId, this._getDialogLabel(detail.record))
+        this._updateDialog(dialog);
     }
 
     _getRecordById(id) {
         return this._dataArray.find(record => record[this._identifier] === id);
     }
 
-    _getDataUnits(...params) {
-        return this._dataArray.map((record, index) => {
-            return new this.types.DataUnit(this._getContentList(record), this._getDialogRecord(record), record[this._identifier], index, record[this._getKey(this._recordInfoLabel)], this._unitButtons, ...params);
-        })
+    _getRecordsByIds(ids){
+        return ids.map(id => this._getRecordById(id))     
     }
+
 
     _generateDataUnits() {
         this._dataUnits = this._dataArray.map((record, index) => {
-            return new this.types.DataUnit(this._getContentList(record), this._getDialogRecord(record), record[this._identifier], index, record[this._getKey(this._recordInfoLabel)], this._unitButtons, record, ...this.dataUnitParams);
+            return new this.types.DataUnit(this._getContentList(record), record, record[this._identifier], this._unitButtons, ...this.dataUnitParams);
         })
     }
 
     _search() {
         this._dataUnits = this._dataUnits.filter(unit =>
             this._searchFields.every(field => {
-                return this._getRecordById(unit.recordId)[field.property.key].toUpperCase().includes(field.searchPhrase.toUpperCase());
+                return this._getRecordById(unit.recordId)[field.property.key]?.toUpperCase()?.includes(field.searchPhrase.toUpperCase()) ?? true;
             })
         )
     }
@@ -297,7 +312,7 @@ class DataView {
         if (event) event();
 
         steps.slice(step + 1).forEach(async func => {
-            func();
+            await func();
         })
 
     }
@@ -330,36 +345,41 @@ class Component {
     get _el() {
         return document.getElementById(this._id);
     }
-
-    postRender() {
-
-    }
 }
 
 
 class DataUnit extends Component {
 
-    contentList;
-    dialogRecord;
-    index;
-    record;
-    recordId
-    recordInfoLabel
-    buttons = [];
+    _contentList;
+    _recordId
+    _record;
+    _buttons = [];
+    _events = ["showDialog", "send"]
 
-    constructor(contentList, dialogRecord, id, index, recordInfoLabel, buttons, record) {
+    constructor(contentList, record, recordId, buttons) {
         super();
-        this.contentList = contentList;
-        this.index = index;
-        this.dialogRecord = dialogRecord;
-        this.record = record;
-        this.recordId = id;
-        this.recordInfoLabel = recordInfoLabel
-        this.buttons = buttons.map(button => new button.type(this.dialogRecord, this.recordId, this.recordInfoLabel, ...button.params))
+        this._contentList = contentList;
+        this._recordId = recordId;
+        this._record = record;
+        this.buttons = buttons.map(button => new button.type(...button.params))
     }
 
+    get recordId() {
+        return this._recordId;
+    }
+
+    get record() {
+        return this._record;
+    }
 
     postRender() {
+        this._events.forEach(event => {
+            this._el.addEventListener(event, (e) => {
+                e.detail.recordId = this._recordId
+                e.detail.record = this._record
+            })
+        })
+
         this.buttons.forEach(btn => btn.postRender());
     }
 }
@@ -409,7 +429,6 @@ class Button extends Component {
     }
 
     postRender() {
-        super.postRender();
         this._el.addEventListener('click', () => this.onClick());
     }
 
@@ -446,26 +465,22 @@ class DialogAcceptButton extends Button {
     }
 }
 
-class RowButton extends Button {
+class DialogTriggerButton extends Button {
 
-    _recordId;
-    _record;
-    _dialogType;
-    _recordInfoLabel;
+    _dialogType
 
-    constructor(record, id, recordInfoLabel, name, dialogType) {
+    constructor(name, dialogType) {
         super(name);
-        this._record = record;
-        this._recordId = id;
         this._dialogType = dialogType;
-        this._recordInfoLabel = recordInfoLabel;
     }
 
     onClick() {
         const event = new CustomEvent("showDialog",
             {
                 bubbles: true,
-                detail: new this._dialogType(this._record, this._recordId, this._recordInfoLabel)
+                detail: {
+                    dialogType: this._dialogType
+                }
             });
 
         this._el.dispatchEvent(event);
@@ -473,41 +488,44 @@ class RowButton extends Button {
 }
 
 
-class ViewButton extends RowButton {
+class ViewButton extends DialogTriggerButton {
 
-    constructor(record, id, label) {
-        super(record, id, label, "View", ViewDialog)
+    constructor() {
+        super("View", ViewDialog)
     }
 }
 
-class EditButton extends RowButton {
+class EditButton extends DialogTriggerButton {
 
-    constructor(record, id, label) {
-        super(record, id, label, "Edit", EditDialog)
+    constructor() {
+        super("Edit", EditDialog)
     }
 }
 
 
-class DeleteButton extends RowButton {
+class DeleteButton extends DialogTriggerButton {
 
-    constructor(record, id, label) {
-        super(record, id, label, "Delete", DeleteDialog)
+    constructor() {
+        super("Delete", DeleteDialog)
     }
 }
 
 class SendButton extends Button {
 
-    _callback;
-    _record;
 
-    constructor(record, id, label, callback) {
+    constructor() {
         super("Send");
-        this._callback = callback;
-        this._record = record;
     }
 
     onClick() {
-        this._callback(this._record);
+        const event = new CustomEvent("send",
+            {
+                bubbles: true,
+                detail: {}
+                }
+            );
+
+        this._el.dispatchEvent(event);
     }
 
 }
