@@ -212,7 +212,7 @@ class Row extends DataUnit {
     return `<tr id="${this._id}">
     ${this._checkBox ? `<th> ${this._checkBox.html}</th>` : ""}
      ${this._includeNumberedRows ? `<th scope='row'>${this.index + 1}</th>` : ""}
-     ${this._contentList.map(content => `<td>${content ?? ""}</td>`).join('')}
+     ${this._contentList.map(content => `<td class="${content.key}">${content.data ?? ""}</td>`).join('')}
      ${this.buttons.map(button => `<td>${button.html()}</td>`).join('')}
      </tr>`
   }

@@ -11,23 +11,7 @@ window.addEventListener("DOMContentLoaded", async () => {
 
     await apiClient.resetTestData();
 
-   
-    /* const table = simpleTable(apiClient)
-        .selectIdentifier("tid")
-        .renameColumns(["attribute_1", "Employee Id"], ["attribute_2", "Name"], ["attribute_3", "Client"], ["attribute_4", "Country"], ["attribute_5", "Retailer"], ["attribute_6", "Store"], ["attribute_7", "Academy"], ["attribute_8", "Challenge"], ["attribute_9", "Manual Points"])
-        .referenceColumnsByName()
-        .setInfoColumn("Name")
-        .specifyColumnTypes(["Academy", "Challenge", "Manual Points"], "number")
-        .createSumOfColumn(["Academy", "Challenge", "Manual Points"], "Total")
-        .selectProperties("Employee Id", "Name", "Client", "Country", "Retailer", "Store", "Academy", "Challenge", "Manual Points", "Total")
-        .sortInDescendingOrder("Total")
-        .addBatchActions()
-        .addSendButton(printRecord)
-        .selectColumns("Name", "Academy", "Challenge", "Manual Points", "Total")
-        .addSingleRecordActions()
-        .addSearchBar()
-        .mount(document.getElementById("stonortable")) */
-     
+    
         const table = new Table(apiClient)
         .selectIdentifier("tid")
         .renameProperties(["attribute_1", "Employee Id"], ["attribute_2", "Name"], ["attribute_3", "Client"], ["attribute_4", "Country"], ["attribute_5", "Retailer"], ["attribute_6", "Store"], ["attribute_7", "Academy"], ["attribute_8", "Challenge"], ["attribute_9", "Manual Points"])
@@ -37,15 +21,28 @@ window.addEventListener("DOMContentLoaded", async () => {
         .selectMainViewProperties("Name", "Client", "Academy", "Challenge", "Manual Points", "Total")
         .selectDialogViewProperties("Employee Id", "Name", "Client", "Country", "Retailer", "Store", "Academy", "Challenge", "Manual Points", "Total")
         .addNumberedRows()
-        .sortInDescendingOrder("Total")
         .addSingleUnitButtons()
         .addClickSort()
         .addSendButton(print)
         .addRecordInfoLabel("Name")
         .addSearchFields("Name", "Client")
         .addTableButtons()
+        .addConditionalCssClass("Total", Condition.GreaterThan, 100, "red") 
         .mount('#stonortable')
 
+
+        const grid = new Grid(apiClient)
+        .selectIdentifier("tid")
+        .renameProperties(["attribute_1", "Employee Id"], ["attribute_2", "Name"], ["attribute_3", "Client"], ["attribute_4", "Country"], ["attribute_5", "Retailer"], ["attribute_6", "Store"], ["attribute_7", "Academy"], ["attribute_8", "Challenge"], ["attribute_9", "Manual Points"])
+        .referencePropByName()
+        .addSingleUnitButtons()
+        .addRecordInfoLabel("Name")
+        .changePropertyTypes(["Academy", "Challenge", "Manual Points"], "number")
+        .addSumProperty(["Academy", "Challenge", "Manual Points"], "Total")
+        .selectMainViewProperties("Name", "Client", "Total")
+        .selectDialogViewProperties("Employee Id", "Name", "Client", "Country", "Retailer", "Store", "Academy", "Challenge", "Manual Points", "Total")
+        .setRowCount(3)
+        .mount('#stonortable2')
 
         function print(record){
             console.log(record);

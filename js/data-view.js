@@ -70,7 +70,7 @@ class DataView {
     }
 
     async editRecord(record, id) {
-        await this.apiClient.editRecord({[this._identifier] : id, ...this._updateRecordWithDataKeys(record)});
+        await this.apiClient.editRecord({ [this._identifier]: id, ...this._updateRecordWithDataKeys(record) });
     }
 
     async deleteRecord(id) {
@@ -150,7 +150,18 @@ class DataView {
         return this;
     }
 
-    _onSend(e){
+    addConditionalCssClass(prop, condition, value, cssClass) {
+        this._pipeline.postRender.push(() => {
+            this._dataUnits.forEach(dataUnit => {
+                if (condition(dataUnit.record[this._getKey(prop)], value))
+                    dataUnit.addCssClassToProperty(this._getKey(prop), cssClass);
+            })
+        })
+
+        return this;
+    }
+
+    _onSend(e) {
         this._sendCallback(e.detail.record);
     }
 
@@ -204,20 +215,18 @@ class DataView {
 
 
     _getContentList(record) {
-        const contentList = [];
-        this._getMainViewProperties().forEach(prop => contentList.push(record[prop.key]))
-        return contentList;
+        return this._getMainViewProperties().map(prop =>{ return {key : prop.key, data: record[prop.key]}})
     }
 
     _getDialogLabel(record) {
         return record[this._getKey(this._recordInfoLabel)]
     }
 
-    _updateDialog(dialog){
+    _updateDialog(dialog) {
         this._dialog.update(dialog)
         this._dialog.postRender();
         this._dialog.show()
-    
+
     }
 
     _showDialog(detail) {
@@ -229,13 +238,13 @@ class DataView {
         return this._dataArray.find(record => record[this._identifier] === id);
     }
 
-    _getRecordsByIds(ids){
-        return ids.map(id => this._getRecordById(id))     
+    _getRecordsByIds(ids) {
+        return ids.map(id => this._getRecordById(id))
     }
 
 
     _generateDataUnits() {
-        this._dataUnits = this._dataArray.map((record, index) => {
+        this._dataUnits = this._dataArray.map((record) => {
             return new this.types.DataUnit(this._getContentList(record), record, record[this._identifier], this._unitButtons, ...this.dataUnitParams);
         })
     }
@@ -243,7 +252,7 @@ class DataView {
     _search() {
         this._dataUnits = this._dataUnits.filter(unit =>
             this._searchFields.every(field => {
-                return this._getRecordById(unit.recordId)[field.property.key]?.toUpperCase()?.includes(field.searchPhrase.toUpperCase()) ?? true;
+                return this._getRecordById(unit.recordId)[field.property.key]?.toUpperCase()?.includes(field.searchPhrase.toUpperCase()) ?? field.searchPhrase.length === 0;
             })
         )
     }
@@ -285,6 +294,7 @@ class DataView {
     }
 
     _postRender() {
+        this._pipeline.postRender.forEach(event => event())
         this._dataUnits.forEach(unit => unit.postRender())
     }
 
@@ -364,6 +374,10 @@ class DataUnit extends Component {
         this.buttons = buttons.map(button => new button.type(...button.params))
     }
 
+    addCssClassToProperty(prop, cssClass){
+        this._el.querySelector(`.${prop}`).classList.add(cssClass);
+    }
+
     get recordId() {
         return this._recordId;
     }
@@ -434,6 +448,10 @@ class Button extends Component {
 
     html() {
         return `<button id="${this._id}" type="button">${this._name}</button>`
+    }
+
+    blockHtml(){
+        return `<button id="${this._id}" type="button" class="btn-block">${this._name}</button>`
     }
 
 }
@@ -522,10 +540,34 @@ class SendButton extends Button {
             {
                 bubbles: true,
                 detail: {}
-                }
-            );
+            }
+        );
 
         this._el.dispatchEvent(event);
+    }
+
+}
+
+class Condition {
+
+    static EqualTo(a, b) {
+        return a === b;
+    }
+
+    static EqualOrLesserThan(a, b) {
+        return a <= b;
+    }
+
+    static LesserThan(a, b) {
+        return a < b;
+    }
+
+    static EqualOrGreaterThan(a, b) {
+        return a >= b;
+    }
+
+    static GreaterThan(a, b) {
+        return a > b;
     }
 
 }
