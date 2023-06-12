@@ -17,22 +17,21 @@ class Grid extends DataView {
         return super.html().concat(this.html())
     }
 
+ 
     html() {
-        let template = `<div id="${this._dataViewName}">`
-        for (let i = 0; i < this._dataUnits.length; i++){
-            if(i % this._rowCount === 0){
-                template += `<div class="row">`;
+        return `<div id="${this._dataViewName}">
+          ${this._dataUnits.map((dataUnit, i) => {
+            if (i % this._rowCount === 0) {
+              return `<div class="row">${dataUnit.html()}`;
             }
-            template += this._dataUnits[i].html()
-            if((i + 1) % this._rowCount === 0){
-                template += `</div>`
+            if ((i + 1) % this._rowCount === 0) {
+              return `${dataUnit.html()}</div>`;
             }
-        }
-        template += "</div>"
-
-        return template;
-       
-    }
+            return dataUnit.html();
+          }).join('')}
+        </div>`;
+      }
+      
 
 
 

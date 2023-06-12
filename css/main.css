@@ -1,4 +1,9 @@
 .red {
-    background-color: red;
     color: red;
 }
+
+#import-dialog > .custom-modal .modal-dialog {
+    max-width: 100%;
+    width: auto;
+    margin: 0;
+  }

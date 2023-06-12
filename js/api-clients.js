@@ -1,7 +1,12 @@
-async function platformccApiClient(auth) {
+export function platformccApiClient() {
 
 
-  let initialRecords = await getAllRecords();
+  const auth = {
+    url: "https://in.informs.dk/api/api.php/records/platformcc6831243_tokens_793524",
+    user: "dfhapiuser",
+    password: "5M7MydYzwIChC2kXfQJtIoGARJyrGeLFj6UzEK85"
+  }
+  // let initialRecords = await getAllRecords();
 
   async function getAllRecords(options) {
 
@@ -97,7 +102,7 @@ async function platformccApiClient(auth) {
 
     const ids = await getAllRecords({ columns: ["tid"] })
 
-    if(!ids || ids.length === 0) return;
+    if (!ids || ids.length === 0) return;
 
     const url = `${auth.url}/${ids.map(id => id.tid).join(',')}`;
 
@@ -124,13 +129,146 @@ async function platformccApiClient(auth) {
 
   }
 
+  /*   function getMetaData() {
+      return Object.entries(initialRecords[0]).map(([key, value]) => {
+        return {
+          "key": key,
+          type: typeof value === "number" ? "number" : "text"
+        }
+      })
+    } */
+
   function getMetaData() {
-    return Object.entries(initialRecords[0]).map(([key, value]) => {
-      return {
-        "key": key,
-        type: typeof value === "number" ? "number" : "text"
+    return [
+      {
+        "key": "tid",
+        "type": "number"
+      },
+      {
+        "key": "participant_id",
+        "type": "text"
+      },
+      {
+        "key": "firstname",
+        "type": "text"
+      },
+      {
+        "key": "lastname",
+        "type": "text"
+      },
+      {
+        "key": "email",
+        "type": "text"
+      },
+      {
+        "key": "emailstatus",
+        "type": "text"
+      },
+      {
+        "key": "token",
+        "type": "text"
+      },
+      {
+        "key": "language",
+        "type": "text"
+      },
+      {
+        "key": "blacklisted",
+        "type": "text"
+      },
+      {
+        "key": "sent",
+        "type": "text"
+      },
+      {
+        "key": "remindersent",
+        "type": "text"
+      },
+      {
+        "key": "remindercount",
+        "type": "number"
+      },
+      {
+        "key": "completed",
+        "type": "text"
+      },
+      {
+        "key": "usesleft",
+        "type": "number"
+      },
+      {
+        "key": "validfrom",
+        "type": "text"
+      },
+      {
+        "key": "validuntil",
+        "type": "text"
+      },
+      {
+        "key": "mpid",
+        "type": "text"
+      },
+      {
+        "key": "attribute_1",
+        "type": "text"
+      },
+      {
+        "key": "attribute_2",
+        "type": "text"
+      },
+      {
+        "key": "attribute_3",
+        "type": "text"
+      },
+      {
+        "key": "attribute_4",
+        "type": "text"
+      },
+      {
+        "key": "attribute_5",
+        "type": "text"
+      },
+      {
+        "key": "attribute_6",
+        "type": "text"
+      },
+      {
+        "key": "attribute_7",
+        "type": "text"
+      },
+      {
+        "key": "attribute_8",
+        "type": "text"
+      },
+      {
+        "key": "attribute_9",
+        "type": "text"
+      },
+      {
+        "key": "attribute_10",
+        "type": "text"
+      },
+      {
+        "key": "attribute_11",
+        "type": "text"
+      },
+      {
+        "key": "attribute_12",
+        "type": "text"
+      },
+      {
+        "key": "attribute_13",
+        "type": "text"
+      },
+      {
+        "key": "attribute_14",
+        "type": "text"
+      },
+      {
+        "key": "attribute_15",
+        "type": "text"
       }
-    })
+    ]
   }
 
   function generateTestData() {
@@ -160,7 +298,8 @@ async function platformccApiClient(auth) {
     deleteRecords,
     deleteAllRecords,
     resetTestData,
-    getMetaData
+    getMetaData,
+    createNewRecords
   }
 
 

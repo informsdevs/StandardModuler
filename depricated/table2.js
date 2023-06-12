@@ -31,7 +31,6 @@ class Table extends DataView {
 
   _selectRecord(record, selected) {
     selected ? this._selectedRecords.push(record) : this._selectedRecords.splice(this._selectedRecords.indexOf(record), 1)
-    console.log(this._selectedRecords.length);
   }
 
   _sortColumns(column) {
@@ -46,8 +45,6 @@ class Table extends DataView {
   _generateRows() {
     this._rows = this._dataUnits.map(dataUnit => new Row(dataUnit, this._includeNumberedRows, this._includeTableButtons))
   }
-
-
 
   addNumberedRows() {
     this._includeNumberedRows = true;

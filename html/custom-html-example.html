@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+
+
+<script type="module" src="../js/custom-table-demo.js"></script>
+
+<link rel="stylesheet" href="../css/main.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bootstrap Site</title>
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/5.0.0-alpha1/css/bootstrap.min.css"
+    integrity="sha384-r4NyP46KrjDleawBgD5tp8Y7UzmLA05oM1iAEQ17CSuDqnUK2+k9luXQOfXJCJ4I" crossorigin="anonymous">
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"
+    integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo"
+    crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/5.0.0-alpha1/js/bootstrap.min.js"
+    integrity="sha384-oesi62hOLfzrys4LxRF63OJCXdXDipiYWBnvTl9Y9/TRlw5xlKIEHpNyvvDShgf/"
+    crossorigin="anonymous"></script>
+
+<body>
+
+    <data-handler
+        id="data-handler"
+        column-names='[["attribute_1", "Employee Id"], ["attribute_2", "Name"], ["attribute_3", "Client"], ["attribute_4", "Country"], ["attribute_5", "Retailer"], ["attribute_6", "Store"], ["attribute_7", "Academy"], ["attribute_8", "Challenge"], ["attribute_9", "Manual Points"]]'
+        column-select='["Employee Id", "Name", "Client", "Country", "Retailer", "Store", "Academy", "Challenge", "Manual Points"]'
+        column-types='[["Academy", "Challenge", "Manual Points"], "number"]'
+        column-sum='[["Academy", "Challenge", "Manual Points"], "Total"]'>
+      
+
+        <import-records-button id="import-records"></import-records-button>
+        <export-records-button></export-records-button>
+
+        <search-container id="search" listen="data-handler">
+           <search-field column="Name"></search-field>
+           <search-field column="Client"></search-field>
+        </search-container>
+
+        <custom-button id='delete-button' name="Delete" listen="table"></custom-button>
+
+        <custom-table id='table' features='["select"]' listen="search"></custom-table>
+
+        <custom-dialog listen="delete-button">
+            <dialog-title>Delete records</dialog-title>
+            <dialog-body>
+               <dialog-delete-body info='Name' listen="delete-button"></dialog-delete-body>
+            </dialog-body>
+            <dialog-footer>
+                <add-records-button name='Save'/>
+             </dialog-footer>
+       </custom-dialog>
+
+        <custom-dialog id="import-dialog" listen="import-records">
+            <dialog-title>Import records</dialog-title>
+            <dialog-body>
+               <custom-table listen="import-records"></custom-table>
+            </dialog-body>
+            <dialog-footer>
+               <add-records-button name='Save'/>
+            </dialog-footer>
+       </custom-dialog>
+  
+
+    </data-handler>
+
+
+
+</body>
+
+</html>

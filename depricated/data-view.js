@@ -150,15 +150,23 @@ class DataView {
         return this;
     }
 
-    addConditionalCssClass(prop, condition, value, cssClass) {
-        this._pipeline.postRender.push(() => {
-            this._dataUnits.forEach(dataUnit => {
-                if (condition(dataUnit.record[this._getKey(prop)], value))
-                    dataUnit.addCssClassToProperty(this._getKey(prop), cssClass);
-            })
-        })
+    _filterDataUnitsByCondition(prop, condition, value) {
+        return this._dataUnits.filter(dataUnit => condition(dataUnit.record[this._getKey(prop)], value))
+    }
 
+    addConditionalCssClassToCell(prop, condition, value, cssClass) {
+        this._pipeline.postRender.push(() => {
+            this._filterDataUnitsByCondition(prop, condition, value).forEach(dataUnit => dataUnit.addCssClassToProperty(this._getKey(prop), cssClass));
+        })
         return this;
+    }
+
+    addConditionalCssClassToRow(prop, condition, value, cssClass) {
+        this._pipeline.postRender.push(() => {
+            this._filterDataUnitsByCondition(prop, condition, value).forEach(dataUnit => dataUnit.addCssClass(cssClass));
+        })
+        return this;
+
     }
 
     _onSend(e) {
@@ -215,7 +223,7 @@ class DataView {
 
 
     _getContentList(record) {
-        return this._getMainViewProperties().map(prop =>{ return {key : prop.key, data: record[prop.key]}})
+        return this._getMainViewProperties().map(prop => { return { key: prop.key, data: record[prop.key] } })
     }
 
     _getDialogLabel(record) {
@@ -350,6 +358,7 @@ class Property {
 }
 
 class Component {
+    
     _id = `viewid-${uuid.v4()}`
 
     get _el() {
@@ -374,8 +383,12 @@ class DataUnit extends Component {
         this.buttons = buttons.map(button => new button.type(...button.params))
     }
 
-    addCssClassToProperty(prop, cssClass){
+    addCssClassToProperty(prop, cssClass) {
         this._el.querySelector(`.${prop}`).classList.add(cssClass);
+    }
+
+    addCssClass(cssClass) {
+        this._el.classList.add(cssClass);
     }
 
     get recordId() {
@@ -450,7 +463,7 @@ class Button extends Component {
         return `<button id="${this._id}" type="button">${this._name}</button>`
     }
 
-    blockHtml(){
+    blockHtml() {
         return `<button id="${this._id}" type="button" class="btn-block">${this._name}</button>`
     }
 
