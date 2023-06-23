@@ -1,22 +1,25 @@
-import { Component } from "./component.js";
+import { RecordListComponent, SingleRecordComponent } from "./component.js";
+import { Events } from "./events.js";
 
-export class CustomDialog extends Component {
+export class CustomDialog extends RecordListComponent {
 
     _modal;
     _titleContent;
     _bodyContent;
     _footerContent;
-    _title;
     _body;
-    _footer;
-    _records;
+   
 
     _eventListeners = [
-        { type: 'sendall', callback: this._sendAll }]
-
-    _initializers = [
-       
+        { type: 'sendall', callback: this._updateEventRecords },
+        { type: 'deleterecords', callback: this._updateEventRecords },
+        { type: 'deleterecord', callback: this._updateEventRecord },
+        { type: 'batchedit', callback: this._batchEdit },
+        { type: 'edit', callback: this._edit },
+        { type: 'addrecord', callback: this._addRecord },
+        { type: 'register', callback: this._registerChild }
     ]
+
  
     connectedCallback() {
         super.connectedCallback();
@@ -28,11 +31,37 @@ export class CustomDialog extends Component {
         });
     }
 
-    _sendAll(e) {
+    _updateEventRecords(e) {
         e.detail.records = this._records;
         this._modal.hide();
     }
 
+    _updateEventRecord(e){
+        e.detail.record = this._records[0];
+        this._modal.hide();
+    }
+
+    _batchEdit(e){
+        this._records.forEach(record => record.attributes = this._body.userInput);
+        e.detail.records = this._records;
+        this._modal.hide();
+    }
+
+    _edit(e){
+        const record = this._records[0];
+        record.attributes = this._body.userInput;
+        e.detail.record = record;
+        this._modal.hide();
+    }
+
+    _addRecord(e){
+        e.detail.record = {attributes : this._body.userInput};
+        this._modal.hide();
+    }
+
+    _registerChild(e){
+        this._body = e.target;
+    }
   
     _retrieveInnerHtml(){
         this._titleContent = this.querySelector('dialog-title');
@@ -48,6 +77,7 @@ export class CustomDialog extends Component {
 
     update(records) {
         super.update(records);
+        this._body instanceof SingleRecordComponent ? this._body.update(records[0]) : this._body.update(records)
         this._modal.show();
     }
 
@@ -76,13 +106,53 @@ export class CustomDialog extends Component {
 customElements.define('custom-dialog', CustomDialog);
 
 
-export class DialogDeleteBody extends Component {
+export class DialogDeleteBody extends SingleRecordComponent {
 
     _infoAttribute;
 
-    _initializers = [
-        { attribute: 'info', type: 'text', callback: this._setInfo.bind(this) }
+    _attributes = [
+        { attribute: 'info', type: 'text', callback: this._setInfo.bind(this) }      
     ]
+
+    connectedCallback(){
+        super.connectedCallback();
+        Events.invoke(this, 'register');
+      }
+    
+
+    _setInfo(info) {
+        this._infoAttribute = info;
+    }
+
+    update(record) {
+        super.update(record);
+        super.render();
+    }
+
+    get infoStr() {
+        if (!this._infoAttribute) return 'this record';
+        return this._record.attributes.find(attr => attr.name === this._infoAttribute).data;
+    }
+
+    get html() {
+        return `<p>Are you sure you want to delete ${this.infoStr}?</p>`
+    }
+}
+
+customElements.define('dialog-delete-body', DialogDeleteBody);
+
+export class DialogBatchDeleteBody extends RecordListComponent {
+
+    _infoAttribute;
+
+    _attributes = [
+        { attribute: 'info', type: 'text', callback: this._setInfo.bind(this) }      
+    ]
+
+    connectedCallback(){
+        super.connectedCallback();
+        Events.invoke(this, 'register');
+      }
 
     _setInfo(info) {
         this._infoAttribute = info;
@@ -94,10 +164,11 @@ export class DialogDeleteBody extends Component {
     }
 
     get infoStr() {
-        if (this._records.length === 0) return 'these records';
-        const tokens = this._records.map(record => record.find(attr => attr.name === this._infoAttribute).data);
-        const lastInstance = tokens.pop();
-        return `${tokens.join(', ')} and ${lastInstance}`
+        if (!this._infoAttribute) return 'these records';
+        if (this._records.length === 1) return this._records[0].attributes.find(attr => attr.name === this._infoAttribute).data;
+        const tokens = this._records.map(record => record.attributes.find(attr => attr.name === this._infoAttribute).data);
+        const lastToken = tokens.pop();
+        return `${tokens.join(', ')} and ${lastToken}`
     }
 
     get html() {
@@ -105,7 +176,7 @@ export class DialogDeleteBody extends Component {
     }
 }
 
-customElements.define('dialog-delete-body', DialogDeleteBody);
+customElements.define('dialog-batch-delete-body', DialogBatchDeleteBody);
 
 export class DialogTitle extends HTMLElement {
 

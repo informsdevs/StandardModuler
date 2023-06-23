@@ -1,23 +1,27 @@
 export class Component extends HTMLElement {
 
-    _records;
-    _columns;
+    _name;
     _watchers = [];
-    _listeners = [];
     _eventListeners = [];
-    _initializers = [];
+    _attributes = [];
+    _features;
+    _config;
+    _sharedEventListeners = [];
 
-    _attributeInitializers = [
-         { attribute: 'listen', type: "text", callback: this._subscribe.bind(this) }]
+    _sharedAttributes = [
+        { attribute: 'listen', type: "text", callback: this._subscribe.bind(this) },
+        { attribute: 'config', type: 'json', callback: this._addConfigAttributes.bind(this) },
+        { attribute: 'features', type: 'json', callback: this._addFeatures.bind(this) },
+        { attribute: 'name', type: 'text', callback: this._setName.bind(this) }]
 
 
-    connectedCallback(){
+    connectedCallback() {
         this._initializeAttributes();
         this._addEventListeners();
     }
 
     _initializeAttributes() {
-        this._attributeInitializers.concat(this._initializers).forEach(initializer => {
+        this._sharedAttributes.concat(this._attributes).forEach(initializer => {
             let attribute = this.getAttribute(initializer.attribute);
             if (attribute) {
                 if (initializer.type === 'json') attribute = JSON.parse(attribute);
@@ -27,9 +31,13 @@ export class Component extends HTMLElement {
     }
 
     _addEventListeners() {
-        this._listeners.concat(this._eventListeners).forEach(eventListener => {
+        this._sharedEventListeners.concat(this._eventListeners).forEach(eventListener => {
             this.addEventListener(eventListener.type, eventListener.callback.bind(this))
         })
+    }
+
+    _setName(name) {
+        this._name = name;
     }
 
     _selectProperties(properties) {
@@ -42,22 +50,68 @@ export class Component extends HTMLElement {
         })
     }
 
-    _updateWatchers(records, columns){
-        this._watchers.forEach(
-            watcher => watcher.update([...records], [...columns]))
+    _addFeatures(features) {
+        features.forEach(feature => this._addFeature(feature));
+    }
+
+    _addFeature(feature) {
+        if (this._features.hasOwnProperty(feature)) {
+            this._features[feature] = true;
+        }
+    }
+
+    _addConfigAttributes(configAttributes) {
+        configAttributes.forEach(attr => this._addConfigAttribute(attr));
+    }
+
+    _addConfigAttribute(attr) {
+        if (this._config.hasOwnProperty(attr)) {
+            this._config[attr] = true;
+        }
     }
 
     register(watcher) {
         this._watchers.push(watcher);
     }
 
-    update(records, columns){
+    render() {
+        this.innerHTML = this.html;
+    }
+
+}
+
+export class RecordListComponent extends Component {
+
+    _records = [];
+    _columns = []; 
+
+    _updateWatchers(records, columns) {
+        this._watchers.forEach(
+            watcher => watcher.update([...records], [...columns]))
+    }
+
+    update(records, columns) {
         this._records = records;
         this._columns = columns;
     }
 
-    render() {
-        this.innerHTML = this.html;
+
+}
+
+
+export class SingleRecordComponent extends Component {
+
+    _record;
+    _column;
+
+    _updateWatcher(record, column) {
+        this._watchers.forEach(
+            watcher => watcher.update(record, column))
+    }
+
+    update(record, column) {
+        this._record = record;
+        this._column = column;
     }
 
 }

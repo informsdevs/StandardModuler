@@ -1,29 +1,36 @@
-import { Component } from './component.js';
+import { RecordListComponent } from './component.js';
 import * as clients from '../api-clients.js'
 
 
-export class DataHandler extends Component {
+export class DataHandler extends RecordListComponent {
 
     _dataArray;
-    _records = [];
     _properties = [];
     _dataMappingPipeline = []
-    _watchers = [];
     _identifier;
     _apiClient
 
     _eventListeners = [
         { type: 'sendall', callback: this._sendAll.bind(this) },
         { type: 'validaterecords', callback: this._validateAndPreviewRecords },
-        { type: 'getallrecords', callback: this._getRecords }]
+        { type: 'getallrecords', callback: this._getRecords },
+        { type: 'deleterecords', callback: this._deleteRecords },
+        { type: 'deleterecord', callback: this._deleteRecord },
+        { type: 'batchedit', callback: this._batchEdit },
+        { type: 'edit', callback: this._editRecord },
+        { type: 'addrecord', callback: this._addRecord },
+        { type: 'getcolumns', callback: this._getColumns }
+    ]
 
-    _initializers = [
+    _attributes = [
         { attribute: 'column-names', type: 'json', callback: this._renameProperties.bind(this) },
         { attribute: 'column-select', type: "json", callback: this._selectProperties.bind(this) },
-        { attribute: 'column-types', type: 'json', callback: this._setPropertyTypes.bind(this) }, 
-        { attribute: 'column-sum', type: 'json', callback: this._addSumProperty.bind(this) }]
+        { attribute: 'column-types', type: 'json', callback: this._setPropertyTypes.bind(this) },
+        { attribute: 'column-sum', type: 'json', callback: this._addSumProperty.bind(this) },
+        { attribute: 'identifier', type: 'text', callback: this._addIdentifier.bind(this) }
+    ]
 
-    constructor(){
+    constructor() {
         super();
         this._apiClient = clients.platformccApiClient();
         this._initializeProperties();
@@ -34,10 +41,6 @@ export class DataHandler extends Component {
         this._update();
     }
 
-    register(watcher) {
-        super.register(watcher);
-        super._updateWatchers(this._records, this._properties);
-    }
 
     async _fetchAll() {
         return await this._apiClient.getAllRecords();
@@ -45,10 +48,10 @@ export class DataHandler extends Component {
 
     _createRecords(dataArray, key) {
         return dataArray.map(item => {
-            const record = [];
-            this._properties.forEach(prop => {
+            const record = { attributes: [], id: item[this._identifier] };
+            this.columns.forEach(prop => {
                 const data = prop.type === 'number' ? parseInt(item[prop[key]]) : item[prop[key]]
-                record.push({ "data": data, ...prop })
+                record.attributes.push({ "data": data, ...prop })
             })
             return record;
         })
@@ -79,7 +82,7 @@ export class DataHandler extends Component {
     }
 
     _selectProperties(properties) {
-        this._properties = this._properties.filter(prop => properties.includes(prop.name));
+        this._properties.forEach(prop => prop.selected = properties.includes(prop.name));
         return this;
     }
 
@@ -87,12 +90,17 @@ export class DataHandler extends Component {
         this._properties = this._apiClient.getMetaData().map(prop => new Property(prop.key, prop.key, prop.type, false));
     }
 
+    _addIdentifier(identifier) {
+        this._identifier = identifier;
+        this._changeProp(identifier, 'readonly', true);
+    }
+
     _getProp(propName) {
         return this._properties.find(prop => prop.name === propName);
     }
 
     _getRecordAttribute(record, attribute) {
-        return record.find(attr => attr.name === attribute)
+        return record.attributes.find(attr => attr.name === attribute)
     }
 
     _changeProp(property, type, newVal) {
@@ -105,8 +113,9 @@ export class DataHandler extends Component {
 
     _mapRecordToApiRecord(record) {
         const apiRecord = {};
-        record.forEach(attribute => {
-            apiRecord[attribute.key] = attribute.data;
+        apiRecord[this._identifier] = record.id;
+        record.attributes.forEach(attribute => {
+            apiRecord[this._getProp(attribute.name).key] = attribute.data;
         })
         return apiRecord;
     }
@@ -135,12 +144,11 @@ export class DataHandler extends Component {
         this._dataArray = await this._fetchAll();
         this._records = this._createRecords(this._dataArray, "key");
         this._dataMappingPipeline.forEach(event => event());
-        super._updateWatchers(this._records, this._properties)
-
+        super._updateWatchers(this._records, this.columns)
     }
 
     get columns() {
-        return [...this._properties]
+        return [...this._properties.filter(prop => prop.selected)]
     }
 
     async _sendAll(e) {
@@ -149,8 +157,37 @@ export class DataHandler extends Component {
         this._update();
     }
 
+    async _deleteRecords(e) {
+        await this._apiClient.deleteRecords(e.detail.records.map(record => record.id));
+        this._update();
+    }
+
+    async _deleteRecord(e) {
+        await this._apiClient.deleteRecord(e.detail.record.id);
+        this._update();
+    }
+
+    async _batchEdit(e){
+        await this._apiClient.editRecords(this._mapRecordsToApiRecord(e.detail.records));
+        this._update();
+    }
+
+    async _editRecord(e){
+        await this._apiClient.editRecord(this._mapRecordToApiRecord(e.detail.record));
+        this._update();
+    }
+
+    async _addRecord(e){
+        await this._apiClient.createNewRecord(this._mapRecordToApiRecord(e.detail.record));
+        this._update();
+    }
+
     _getRecords(e) {
-        e.detail.callback({"records": this._records, "columns": this.columns})
+        e.detail.callback({ "records": this._records, "columns": this.columns })
+    }
+
+    _getColumns(e) {
+        e.detail.callback(this.columns);
     }
 
 
@@ -162,7 +199,10 @@ class Property {
         this.name = name;
         this.type = type;
         this.readonly = readonly;
+        this.selected = true
     }
 }
+
+
 
 customElements.define('data-handler', DataHandler);

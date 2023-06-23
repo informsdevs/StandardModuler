@@ -1,7 +1,7 @@
-import { Component } from "./component.js";
+import { RecordListComponent } from "./component.js";
 import { Events } from "./events.js"
 
-export class SearchContainer extends Component {
+export class SearchContainer extends RecordListComponent {
 
     _searchFields = [];
 
@@ -9,7 +9,6 @@ export class SearchContainer extends Component {
         { type: 'keyup', callback: this._onKeyUp.bind(this) },
         { type: 'register', callback: this._registerSearchField.bind(this) }]
 
-    _initializers = []
 
     _onKeyUp() {
         this.update(this._records, this._columns)
@@ -18,7 +17,7 @@ export class SearchContainer extends Component {
     _filter() {
         return this._records.filter(record =>
             this._searchFields.every(field => {
-                return record.find(attr => attr.name === field.column).data.toUpperCase().includes(field.searchPhrase.toUpperCase())
+                return record.attributes.find(attr => attr.name === field.column).data.toUpperCase().includes(field.searchPhrase.toUpperCase())
             })
         )
     }

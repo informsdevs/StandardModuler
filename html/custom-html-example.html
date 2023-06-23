@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 
-
+<head>
 <script type="module" src="../js/custom-table-demo.js"></script>
 
 <link rel="stylesheet" href="../css/main.css">
@@ -16,49 +16,107 @@
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/5.0.0-alpha1/js/bootstrap.min.js"
     integrity="sha384-oesi62hOLfzrys4LxRF63OJCXdXDipiYWBnvTl9Y9/TRlw5xlKIEHpNyvvDShgf/"
     crossorigin="anonymous"></script>
-
+</head>
 <body>
 
-    <data-handler
-        id="data-handler"
+    <data-handler id="data-handler" identifier="tid"
         column-names='[["attribute_1", "Employee Id"], ["attribute_2", "Name"], ["attribute_3", "Client"], ["attribute_4", "Country"], ["attribute_5", "Retailer"], ["attribute_6", "Store"], ["attribute_7", "Academy"], ["attribute_8", "Challenge"], ["attribute_9", "Manual Points"]]'
         column-select='["Employee Id", "Name", "Client", "Country", "Retailer", "Store", "Academy", "Challenge", "Manual Points"]'
         column-types='[["Academy", "Challenge", "Manual Points"], "number"]'
         column-sum='[["Academy", "Challenge", "Manual Points"], "Total"]'>
-      
+
 
         <import-records-button id="import-records"></import-records-button>
-        <export-records-button></export-records-button>
+        <export-records-button listen="table"></export-records-button>
 
         <search-container id="search" listen="data-handler">
-           <search-field column="Name"></search-field>
-           <search-field column="Client"></search-field>
+            <search-field column="Name"></search-field>
+            <search-field column="Client"></search-field>
         </search-container>
 
         <custom-button id='delete-button' name="Delete" listen="table"></custom-button>
+        <custom-button id="batch-edit-button" name="Edit" listen="table"></custom-button>
+        <custom-button id="create-button" name="Add" listen="data-handler"></custom-button>
+        <custom-button name="View"></custom-button>
 
-        <custom-table id='table' features='["select"]' listen="search"></custom-table>
+
+        <custom-table id='table' features='["select"]' listen="search">
+            <table-columns name="Actions">
+                <table-button name="Delete" target="delete-dialog"></table-button>
+                <table-button name="View" target="view-dialog"></table-button>
+            <table-button name="Edit" target="edit-dialog"></table-button>   
+            </table-columns>
+        </custom-table>
+
+        <custom-dialog id='view-dialog'>
+            <dialog-title>View Record</dialog-title>
+            <dialog-body>
+                <custom-attribute-table config='["readonly"]'></custom-attribute-table>
+            </dialog-body>
+            <dialog-footer></dialog-footer>
+        </custom-dialog>
+
+        <custom-dialog id='delete-dialog'>
+            <dialog-title>Delete Record</dialog-title>
+            <dialog-body>
+                <dialog-delete-body info='Name'></dialog-delete-body>
+            </dialog-body>
+            <dialog-footer>
+                <dialog-accept-button name='Confirm' event="deleterecord"></dialog-accept-button>
+            </dialog-footer>
+        </custom-dialog>
+
+
+        <custom-dialog listen="create-button">
+            <dialog-title>Add Record</dialog-title>
+            <dialog-body>
+                <custom-attribute-table config='["empty"]'></custom-attribute-table>
+            </dialog-body>
+            <dialog-footer>
+                <dialog-accept-button name='Confirm' event="addrecord"></dialog-accept-button>
+            </dialog-footer>
+        </custom-dialog>
+
+        <custom-dialog id='edit-dialog'>
+            <dialog-title>Edit Record</dialog-title>
+            <dialog-body>
+                <custom-attribute-table></custom-attribute-table>
+            </dialog-body>
+            <dialog-footer>
+                <dialog-accept-button name='Save' event="edit"></dialog-accept-button>
+            </dialog-footer>
+        </custom-dialog>
+
+        <custom-dialog id='batch-edit-dialog' listen="batch-edit-button">
+            <dialog-title>Edit Records</dialog-title>
+            <dialog-body>
+                <custom-attribute-table config='["disable", "empty"]' features='["select"]'></custom-attribute-table>
+            </dialog-body>
+            <dialog-footer>
+                <dialog-accept-button name='Confirm' event="batchedit"></dialog-accept-button>
+            </dialog-footer>
+        </custom-dialog>
 
         <custom-dialog listen="delete-button">
             <dialog-title>Delete records</dialog-title>
             <dialog-body>
-               <dialog-delete-body info='Name' listen="delete-button"></dialog-delete-body>
+                <dialog-batch-delete-body info='Name' listen="delete-button"></dialog-batch-delete-body>
             </dialog-body>
             <dialog-footer>
-                <add-records-button name='Save'/>
-             </dialog-footer>
-       </custom-dialog>
+                <dialog-accept-button name='Confirm' event="deleterecords"></dialog-accept-button>
+            </dialog-footer>
+        </custom-dialog>
 
         <custom-dialog id="import-dialog" listen="import-records">
             <dialog-title>Import records</dialog-title>
             <dialog-body>
-               <custom-table listen="import-records"></custom-table>
+                <custom-table listen="import-records"></custom-table>
             </dialog-body>
             <dialog-footer>
-               <add-records-button name='Save'/>
+                <add-records-button name='Save' />
             </dialog-footer>
-       </custom-dialog>
-  
+        </custom-dialog>
+
 
     </data-handler>
 

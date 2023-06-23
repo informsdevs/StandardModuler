@@ -15,6 +15,39 @@ export class Events {
     });
   }
 
+  static getAllSync(element, event) {
+    let result;
+    const callback = (columns) => {
+      result = columns;
+    };
+  
+    element.dispatchEvent(
+      new CustomEvent(event, {
+        bubbles: true,
+        detail: {
+          callback: callback,
+        },
+      })
+    );
+  
+    return result;
+  }
+
+  static getAsync(element, event) {
+    return new Promise((resolve) => {
+      element.dispatchEvent(
+        new CustomEvent(event, {
+          bubbles: true,
+          detail: {
+            callback: (record) => {
+              resolve(record);
+            },
+          },
+        })
+      );
+    });
+  }
+
   static validateAllAsync(element, data) {
     return new Promise((resolve) => {
       element.dispatchEvent(
@@ -22,6 +55,22 @@ export class Events {
           bubbles: true,
           detail: {
             records: data,
+            callback: (records) => {
+              resolve(records);
+            },
+          },
+        })
+      );
+    });
+  }
+
+  static get(element, event, data) {
+    return new Promise((resolve) => {
+      element.dispatchEvent(
+        new CustomEvent(event, {
+          bubbles: true,
+          detail: {
+            index: data,
             callback: (records) => {
               resolve(records);
             },

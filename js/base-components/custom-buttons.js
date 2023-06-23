@@ -1,21 +1,49 @@
-import { Component  } from "./component.js";
+import { RecordListComponent, SingleRecordComponent } from "./component.js";
 import { Events } from "./events.js";
 
-export class AddRecordsButton extends HTMLElement {
 
-    _name;
+export class DialogAcceptButton extends RecordListComponent {
+
+    _event;
+
+    _attributes = [
+        { attribute: 'event', type: 'text', callback: this._addEvent.bind(this) },
+       
+    ]
 
     connectedCallback() {
+        super.connectedCallback();
+        document.addEventListener("DOMContentLoaded", () => {
+            this.addEventListener('click', () => {
+                Events.send(this, this._event, {});
+            })
+        }, { once: true });
+        super.render();
+    }
+
+    _addEvent(event){
+        this._event = event;
+    }
+
+    get html() {
+        return `<button type="button">${this._name}</button>`
+    }
+
+}
+
+customElements.define('dialog-accept-button', DialogAcceptButton);
+
+export class AddRecordsButton extends RecordListComponent {
+
+    connectedCallback() {
+        super.connectedCallback();
         document.addEventListener("DOMContentLoaded", () => {
             this.addEventListener('click', () => {
                 Events.sendAll(this, {});
             })
         }, { once: true });
-
-        this._name = this.getAttribute("name");
-        this.innerHTML = this.html;
+        super.render();
     }
-
 
     get html() {
         return `<button type="button">${this._name}</button>`
@@ -25,35 +53,64 @@ export class AddRecordsButton extends HTMLElement {
 
 customElements.define('add-records-button', AddRecordsButton);
 
-export class CustomButton extends Component {
+export class DeleteRecordsButton extends RecordListComponent {
 
-    _name;
+    connectedCallback() {
+        super.connectedCallback();
+        document.addEventListener("DOMContentLoaded", () => {
+            this.addEventListener('click', () => {
+                Events.send(this, 'deleterecords', {});
+            })
+        }, { once: true });
+        super.render();
+    }
+
+    get html() {
+        return `<button type="button">${this._name}</button>`
+    }
+}
+
+
+
+customElements.define('delete-records-button', DeleteRecordsButton);
+
+export class CustomButton extends RecordListComponent {
+
+    _target;
 
     _eventListeners = [
         { type: 'click', callback: this._onClick }
     ]
 
-    _initializers = [
-        { attribute: 'name', type: 'text', callback: this._setName.bind(this) }
+    _attributes = [
+        { attribute: 'target', type: 'text', callback: this._addTarget.bind(this) },
+        { attribute: 'index', type: 'text', callback: this._setIndex.bind(this)}
     ]
+
 
     connectedCallback() {
         super.connectedCallback();
+        super.render();
         this.style.visibility = 'hidden';
+    }
+
+    _setIndex(index){
+        this._index = index;
+    }
+
+    _addTarget(target) {
+        this._target = document.getElementById(target);
     }
 
     _onClick() {
         super._updateWatchers(this._records, this._columns);
+        if(this._target) this._target.update(this._records, this._columns)
     }
 
     update(records, columns) {
-        this.style.visibility = records.length > 0 ? 'visible' : 'hidden';
+         this.style.visibility = records.length > 0 ? 'visible' : 'hidden';
         super.update(records, columns);
         super.render();
-    } 
-
-    _setName(name) {
-        this._name = name;
     }
 
     get html() {
@@ -64,19 +121,70 @@ export class CustomButton extends Component {
 
 customElements.define('custom-button', CustomButton);
 
+export class TableButton extends SingleRecordComponent {
 
-export class ExportRecordsButton extends HTMLElement {
+    _target;
+    _index;
 
+    _eventListeners = [
+        { type: 'click', callback: this._onClick }
+    ]
+
+    _attributes = [
+        { attribute: 'target', type: 'text', callback: this._addTarget.bind(this) },
+        { attribute: 'index', type: 'text', callback: this._setIndex.bind(this)}
+    ]
+
+
+    async connectedCallback() {
+        super.connectedCallback();
+        this._record = await Events.getAsync(this, 'getrecord');
+        super.render();
+    }
+
+    _setIndex(index){
+        this._index = index;
+    }
+
+    _addTarget(target) {
+        this._target = document.getElementById(target);
+    }
+
+    _onClick() {
+        if(this._target) this._target.update([this._record])
+    }
+
+    get index(){
+        return this._index;
+    }
+
+    update(records) {
+        super.update(records);
+        super.render();
+    }
+
+    get html() {
+        return `<button type="button">${this._name}</button>`
+    }
+
+}
+
+customElements.define('table-button', TableButton);
+export class ExportRecordsButton extends RecordListComponent {
+
+    _eventListeners = [
+        { type: 'click', callback: this._onClick }
+    ]
 
     connectedCallback() {
-        this.addEventListener('click', async () => {
-            const { records, columns } = await getAllAsync(this, "getallrecords");
-            const csv = this._getCsvContent(records, columns);
-            const blob = new Blob([csv], { type: 'text/csv' });
-            this.querySelector('a').href = URL.createObjectURL(blob);
-        })
+        super.connectedCallback();
+        super.render();
+    }
 
-        this.innerHTML = this.html;
+    _onClick() {
+        const csv = this._getCsvContent(this._records, this._columns);
+        const blob = new Blob([csv], { type: 'text/csv' });
+        this.querySelector('a').href = URL.createObjectURL(blob);
     }
 
     _getCsvContent(records, columns) {
@@ -84,7 +192,7 @@ export class ExportRecordsButton extends HTMLElement {
             .join(';')
             .concat("\n")
             .concat(records.map(record => {
-                return record.map(attribute => attribute.data).join(';')
+                return record.attributes.map(attribute => attribute.data).join(';')
             }).join('\n'))
     }
 
@@ -97,23 +205,20 @@ export class ExportRecordsButton extends HTMLElement {
     }
 }
 
-
-
 customElements.define('export-records-button', ExportRecordsButton);
-export class ImportRecordsButton extends HTMLElement {
+export class ImportRecordsButton extends RecordListComponent {
 
     _columns;
     _rows;
-    _watchers = [];
+
+    _eventListeners = [
+        { type: 'change', callback: this._onChange.bind(this) }
+    ]
 
 
     connectedCallback() {
-        this.innerHTML = this.html;
-        this.addEventListener('change', this.onChange.bind(this))
-    }
-
-    register(watcher) {
-        this._watchers.push(watcher);
+        super.connectedCallback();
+        super.render();
     }
 
     _splitCsvIntoLines(csvContent) {
@@ -139,25 +244,24 @@ export class ImportRecordsButton extends HTMLElement {
         return lines.splice(1).map(line => this._getCsvRecord(columns, line));
     }
 
-    onChange(e) {
+    async _update(csvContent) {
+        const lines = this._splitCsvIntoLines(csvContent);
+        const columns = this._getCsvColumns(lines);
+        const csvRecords = this._getCsvRecords(columns, lines);
+        const data = await Events.validateAllAsync(this, csvRecords);
+        super._updateWatchers(data.records, data.columns);
 
-        var file = e.target.files[0];
+    }
 
-        let csvContent;
+    _onChange(e) {
+
+        const file = e.target.files[0];
 
         if (file) {
             var reader = new FileReader();
-            const self = this;
-
             reader.onload = async (e) => {
-                csvContent = e.target.result;
-                const lines = this._splitCsvIntoLines(csvContent);
-                const columns = this._getCsvColumns(lines);
-                const csvRecords = this._getCsvRecords(columns, lines);
-                const data = await Events.validateAllAsync(this, csvRecords);
-                this._watchers.forEach(watcher => watcher.update(data.records, data.columns))
+                this._update(e.target.result);
             };
-
             reader.readAsText(file);
         }
     }
