@@ -68,7 +68,7 @@ class CustomInputField extends SingleRecordComponent {
     }
 
     get html() {
-        return `<input type=${this._type} ${this._config.readonly ? 'disabled' : ''} ${!this._config.empty ? `value='${this.data ?? ""}'` : this._type === 'number' ? `value="0"` : ""}/>`
+        return `<input class="${this._classes}" type=${this._type} ${this._config.readonly ? 'disabled' : ''} ${!this._config.empty ? `value='${this.data ?? ""}'` : this._type === 'number' ? `value="0"` : ""}/>`
     }
 }
 

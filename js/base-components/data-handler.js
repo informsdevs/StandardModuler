@@ -23,11 +23,12 @@ export class DataHandler extends RecordListComponent {
     ]
 
     _attributes = [
-        { attribute: 'column-names', type: 'json', callback: this._renameProperties.bind(this) },
-        { attribute: 'column-select', type: "json", callback: this._selectProperties.bind(this) },
-        { attribute: 'column-types', type: 'json', callback: this._setPropertyTypes.bind(this) },
-        { attribute: 'column-sum', type: 'json', callback: this._addSumProperty.bind(this) },
-        { attribute: 'identifier', type: 'text', callback: this._addIdentifier.bind(this) }
+        { attribute: 'prop-names', type: 'json', callback: this._renameProperties.bind(this) },
+        { attribute: 'prop-select', type: "json", callback: this._selectProperties.bind(this) },
+        { attribute: 'prop-types', type: 'json', callback: this._setPropertyTypes.bind(this) },
+        { attribute: 'prop-sum', type: 'json', callback: this._addSumProperty.bind(this) },
+        { attribute: 'identifier', type: 'text', callback: this._addIdentifier.bind(this) },
+        { attribute: 'prop-initials', type: 'json', callback: this._addInitialsColumn.bind(this) }
     ]
 
     constructor() {
@@ -65,6 +66,15 @@ export class DataHandler extends RecordListComponent {
         this._addProp(sumColumn, sumColumn, "number", true);
         return this;
     }
+
+    _addInitialsColumn(options){
+        const columns = options[0], initialsColumn = options[1];
+        this._dataMappingPipeline.push(() => this._records.forEach(record => {
+            this._getRecordAttribute(record, initialsColumn).data = columns.map(column => this._getRecordAttribute(record, column).data).reduce((a, b) => a.toUpperCase()[0] + b.toUpperCase()[0])
+        }))
+        this._addProp(initialsColumn, initialsColumn, "text", true);
+        return this;    
+      }
 
 
     _setPropertyTypes(properties) {

@@ -59,7 +59,7 @@ class CustomAttributesTable extends SingleRecordComponent {
 
   get html() {
     return `
-      <table class="table">
+      <table class="table ${this._classes}">
         <tbody>
           ${this._record.attributes
             .map(attr => {

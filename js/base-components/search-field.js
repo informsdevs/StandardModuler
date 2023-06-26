@@ -1,4 +1,4 @@
-import { RecordListComponent } from "./component.js";
+import { RecordListComponent, Component } from "./component.js";
 import { Events } from "./events.js"
 
 export class SearchContainer extends RecordListComponent {
@@ -7,7 +7,8 @@ export class SearchContainer extends RecordListComponent {
 
     _eventListeners = [
         { type: 'keyup', callback: this._onKeyUp.bind(this) },
-        { type: 'register', callback: this._registerSearchField.bind(this) }]
+        { type: 'register', callback: this._registerSearchField.bind(this) },
+        { type: 'change', callback: this._onKeyUp.bind(this)}]
 
 
     _onKeyUp() {
@@ -68,10 +69,57 @@ export class SearchField extends HTMLElement {
     }
 
     get html() {
-        return `<input type="text" placeholder="Search by ${this._column}"/>`
+        return `<input class="${this._classes}" type="text" placeholder="Search by ${this._column}"/>`
     }
 
 
 }
 
 customElements.define('search-field', SearchField);
+
+class SearchRadioButton extends Component {
+
+    _id = uuid.v4();
+    _column
+    _config = {
+        noFilter : false
+    }
+
+    _attributes = [
+        { attribute: 'column', type: 'text', callback: this._selectColumn.bind(this) },
+        { attribute: 'column', type: 'text', callback: this._selectColumn.bind(this) }
+
+      ]
+
+      connectedCallback() {
+        super.connectedCallback();
+        super.render();
+        Events.invoke(this, 'register')
+    }
+
+      _selectColumn(column) {
+        this._column = column;
+    }
+
+    
+    get column() {
+        return this._column;
+    }
+
+    get searchPhrase() {
+        return this.querySelector('input[type="radio"]').checked && !this._config.noFilter ? this._name : "";
+    }
+
+
+    get html(){
+        return ` <div class="form-check ${this._classes}">
+        <input class="form-check-input" type="radio" name="radio" id="radio-${this._id}">
+        <label class="form-check-label" for="radio-${this._id}">
+          ${this._name}
+        </label>
+      </div>`
+    }
+
+}
+
+customElements.define('search-radio-button', SearchRadioButton);

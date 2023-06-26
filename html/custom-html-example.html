@@ -16,22 +16,34 @@
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/5.0.0-alpha1/js/bootstrap.min.js"
     integrity="sha384-oesi62hOLfzrys4LxRF63OJCXdXDipiYWBnvTl9Y9/TRlw5xlKIEHpNyvvDShgf/"
     crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js"></script>
 </head>
 <body>
 
     <data-handler id="data-handler" identifier="tid"
-        column-names='[["attribute_1", "Employee Id"], ["attribute_2", "Name"], ["attribute_3", "Client"], ["attribute_4", "Country"], ["attribute_5", "Retailer"], ["attribute_6", "Store"], ["attribute_7", "Academy"], ["attribute_8", "Challenge"], ["attribute_9", "Manual Points"]]'
-        column-select='["Employee Id", "Name", "Client", "Country", "Retailer", "Store", "Academy", "Challenge", "Manual Points"]'
-        column-types='[["Academy", "Challenge", "Manual Points"], "number"]'
-        column-sum='[["Academy", "Challenge", "Manual Points"], "Total"]'>
+        prop-names='[["attribute_1", "Employee Id"], ["attribute_2", "Name"], ["attribute_3", "Client"], ["attribute_4", "Country"], ["attribute_5", "Retailer"], ["attribute_6", "Store"], ["attribute_7", "Academy"], ["attribute_8", "Challenge"], ["attribute_9", "Manual Points"]]'
+        prop-select='["Employee Id", "Name", "Client", "Country", "Retailer", "Store", "Academy", "Challenge", "Manual Points"]'
+        prop-types='[["Academy", "Challenge", "Manual Points"], "number"]'
+        prop-sum='[["Academy", "Challenge", "Manual Points"], "Total"]'
+        prop-initials='[["Name", "Client"], "Initials"]'>
 
+
+        <custom-grid listen="data-handler" row-count="3"
+        column-select='["Name", "Client", "Country"]'>
+            <grid-columns>
+                <table-button name="Delete" target="delete-dialog"></table-button>
+                <table-button name="View" target="view-dialog"></table-button>
+            </grid-columns>
+        </custom-grid>
 
         <import-records-button id="import-records"></import-records-button>
         <export-records-button listen="table"></export-records-button>
 
         <search-container id="search" listen="data-handler">
-            <search-field column="Name"></search-field>
-            <search-field column="Client"></search-field>
+           <search-field column="Name"></search-field>
+            <search-radio-button name="None" column="Client" config='["noFilter"]'></search-radio-button>
+            <search-radio-button name="ABC Company" column="Client"></search-radio-button>
+            <search-radio-button name="Apple Inc." column="Client"></search-radio-button>
         </search-container>
 
         <custom-button id='delete-button' name="Delete" listen="table"></custom-button>
@@ -39,8 +51,9 @@
         <custom-button id="create-button" name="Add" listen="data-handler"></custom-button>
         <custom-button name="View"></custom-button>
 
-
-        <custom-table id='table' features='["select"]' listen="search">
+  
+        <custom-table id='table' features='["select"]' wrap-cells="label" listen="search" class="table-dark"
+        column-select='["Name", "Client", "Country"]'>
             <table-columns name="Actions">
                 <table-button name="Delete" target="delete-dialog"></table-button>
                 <table-button name="View" target="view-dialog"></table-button>
@@ -113,7 +126,7 @@
                 <custom-table listen="import-records"></custom-table>
             </dialog-body>
             <dialog-footer>
-                <add-records-button name='Save' />
+                <dialog-accept-button event="sendall" name='Save' />
             </dialog-footer>
         </custom-dialog>
 

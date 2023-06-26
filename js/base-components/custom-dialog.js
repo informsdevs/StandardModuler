@@ -75,9 +75,9 @@ export class CustomDialog extends RecordListComponent {
         this.querySelector(".modal-footer").appendChild(this._footerContent);
     }
 
-    update(records) {
+    update(records, columns) {
         super.update(records);
-        this._body instanceof SingleRecordComponent ? this._body.update(records[0]) : this._body.update(records)
+        this._body instanceof SingleRecordComponent ? this._body.update(records[0], columns) : this._body.update(records, columns)
         this._modal.show();
     }
 
@@ -85,7 +85,7 @@ export class CustomDialog extends RecordListComponent {
 
     get html() {
         return `
-        <div class='modal fade custom-modal' tabindex='-1' role='dialog' aria-labelledby='exampleModalLabel' aria-hidden='true'>
+        <div class='modal fade custom-modal ${this._classes}' tabindex='-1' role='dialog' aria-labelledby='exampleModalLabel' aria-hidden='true'>
           <div class="modal-dialog" role="document">
             <div class="modal-content">
               <div class="modal-header">

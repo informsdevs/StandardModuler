@@ -26,53 +26,13 @@ export class DialogAcceptButton extends RecordListComponent {
     }
 
     get html() {
-        return `<button type="button">${this._name}</button>`
+        return `<button type="button" class=${this._classes}>${this._name}</button>`
     }
 
 }
 
 customElements.define('dialog-accept-button', DialogAcceptButton);
 
-export class AddRecordsButton extends RecordListComponent {
-
-    connectedCallback() {
-        super.connectedCallback();
-        document.addEventListener("DOMContentLoaded", () => {
-            this.addEventListener('click', () => {
-                Events.sendAll(this, {});
-            })
-        }, { once: true });
-        super.render();
-    }
-
-    get html() {
-        return `<button type="button">${this._name}</button>`
-    }
-
-}
-
-customElements.define('add-records-button', AddRecordsButton);
-
-export class DeleteRecordsButton extends RecordListComponent {
-
-    connectedCallback() {
-        super.connectedCallback();
-        document.addEventListener("DOMContentLoaded", () => {
-            this.addEventListener('click', () => {
-                Events.send(this, 'deleterecords', {});
-            })
-        }, { once: true });
-        super.render();
-    }
-
-    get html() {
-        return `<button type="button">${this._name}</button>`
-    }
-}
-
-
-
-customElements.define('delete-records-button', DeleteRecordsButton);
 
 export class CustomButton extends RecordListComponent {
 
@@ -114,7 +74,7 @@ export class CustomButton extends RecordListComponent {
     }
 
     get html() {
-        return `<button type="button">${this._name}</button>`
+        return `<button type="button" class="${this._classes}">${this._name}</button>`
     }
 
 }
@@ -164,7 +124,7 @@ export class TableButton extends SingleRecordComponent {
     }
 
     get html() {
-        return `<button type="button">${this._name}</button>`
+        return `<button type="button" class="${this._classes}">${this._name}</button>`
     }
 
 }
@@ -179,6 +139,7 @@ export class ExportRecordsButton extends RecordListComponent {
     connectedCallback() {
         super.connectedCallback();
         super.render();
+        this.style.visibility = 'hidden';
     }
 
     _onClick() {
@@ -186,6 +147,12 @@ export class ExportRecordsButton extends RecordListComponent {
         const blob = new Blob([csv], { type: 'text/csv' });
         this.querySelector('a').href = URL.createObjectURL(blob);
     }
+
+    update(records, columns) {
+        this.style.visibility = records.length > 0 ? 'visible' : 'hidden';
+       super.update(records, columns);
+       super.render();
+   }
 
     _getCsvContent(records, columns) {
         return columns.map(column => column.name)
@@ -198,7 +165,7 @@ export class ExportRecordsButton extends RecordListComponent {
 
     get html() {
         return `
-        <a download="records.csv">
+        <a class="${this._classes}" download="records.csv">
           <button type="button">Download records</button>
         </a>
       `;
@@ -267,7 +234,7 @@ export class ImportRecordsButton extends RecordListComponent {
     }
 
     get html() {
-        return `<input type="file"/>`
+        return `<input class="${this._classes}" type="file"/>`
     }
 
 }

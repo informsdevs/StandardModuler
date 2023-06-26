@@ -1,4 +1,5 @@
 import { RecordListComponent } from "./component.js"
+import { Events } from "./events.js";
 
 export class CustomTable extends RecordListComponent {
 
@@ -6,6 +7,7 @@ export class CustomTable extends RecordListComponent {
   _tableRows = [];
   _tableColumns = [];
   _tableColumnContainer;
+  _cellWrapper;
 
   _features = {
     select: false
@@ -16,12 +18,26 @@ export class CustomTable extends RecordListComponent {
     { type: 'getrecord', callback: this._getRecord }
   ]
 
+  _attributes = [
+    { attribute: 'wrap-cells', type: 'text', callback: this._addCellWrapper.bind(this) },
+    { attribute: 'column-select', type: 'json', callback: this._selectColumns.bind(this) }
+  ]
+
   connectedCallback() {
     super.connectedCallback();
+    Events.invoke(this, 'register');
     document.addEventListener("DOMContentLoaded", () => {
         this._retrieveTableColumnContainer();
         this._retrieveTableColumns(); 
     });
+  }
+
+  _selectColumns(props){
+    this._selectedColumns = props;
+}
+
+  _addCellWrapper(wrapper){
+    this._cellWrapper = wrapper;
   }
 
   _getRecord(e){
@@ -69,11 +85,11 @@ export class CustomTable extends RecordListComponent {
 
   get html() {
     return `
-          <table id="${this._dataViewName}" class="table">
+          <table id="${this._dataViewName}" class="table ${this._classes}">
             <thead>
               <tr>
                 ${this._features.select ? `<th scope='col'>Select</th>` : ''}
-                ${this._columns.map(column => `<th class="column" scope="col">${column.name}</th>`).join('')}
+                ${this.columns.map(column => `<th class="column" scope="col">${column.name}</th>`).join('')}
                 ${this._tableColumns.length > 0 ? `<th scope='col' colspan="${this._tableColumns.length}">${this._tableColumnContainer.name}</th>` : ""} 
               </tr>
             </thead>
@@ -83,7 +99,7 @@ export class CustomTable extends RecordListComponent {
           return `
                     <tr class='custom-table-row' id=${index}>
                       ${this._features.select ? `<td><custom-check-box index=${index}></td>` : ''}
-                      ${record.attributes.map(attribute => `<td>${attribute.data}</td>`).join('')}
+                      ${this._getRecordAttributes(record).map(attribute => `<td>${this._cellWrapper ? `<${this._cellWrapper}>${attribute.data}</${this._cellWrapper}>` : `${attribute.data}`}</td>`).join('')}
                      
                     </tr>
                   `;
