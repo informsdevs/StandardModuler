@@ -1,11 +1,13 @@
-import { RecordListComponent } from "./component.js"
+import { RecordListComponent, Component } from "./component.js"
 import { Events } from "./events.js";
+import { MathConditions } from "../misc/math-conditions.js";
 
 export class CustomTable extends RecordListComponent {
 
   _selectedRecordIndices = []
   _tableRows = [];
   _tableColumns = [];
+  _postRender = [];
   _tableColumnContainer;
   _cellWrapper;
 
@@ -20,29 +22,57 @@ export class CustomTable extends RecordListComponent {
 
   _attributes = [
     { attribute: 'wrap-cells', type: 'text', callback: this._addCellWrapper.bind(this) },
-    { attribute: 'column-select', type: 'json', callback: this._selectColumns.bind(this) }
+    { attribute: 'column-select', type: 'json', callback: this._selectColumns.bind(this) },
+    { attribute: 'conditional-class', type: 'json', callback: this._addConditionalClass.bind(this) }
   ]
 
   connectedCallback() {
     super.connectedCallback();
     Events.invoke(this, 'register');
     document.addEventListener("DOMContentLoaded", () => {
-        this._retrieveTableColumnContainer();
-        this._retrieveTableColumns(); 
+      this._retrieveTableColumnContainer();
+      this._retrieveTableColumns();
     });
   }
 
-  _selectColumns(props){
-    this._selectedColumns = props;
-}
+  defineColumns(columns) {
+    this._selectColumns(columns);
+    super.render();
+    this._retrieveTableRows();
+    this._renderCustomColumns();
+  }
 
-  _addCellWrapper(wrapper){
+  selectAllRecords() {
+    this._selectedRecordIndices = Array.from(Array(this._records.length).keys());
+    this.querySelectorAll('custom-check-box').forEach(checkbox => checkbox.check());
+    this._updateWatchers(this._records, this._columns);
+  }
+
+  selectNoRecords() {
+    this._selectedRecordIndices = [];
+    this.querySelectorAll('custom-check-box').forEach(checkbox => checkbox.uncheck())
+    this._updateWatchers([], this._columns)
+  }
+
+  _addConditionalClass(options) {
+    const column = options[0], condition = options[1], value = options[2], classes = options[3];
+    this._postRender.push(() => 
+    this._records.filter(record => {
+      const attribute = record.attributes.find(attr => attr.name === column)
+      return MathConditions[condition](attribute.data, value);
+    }).forEach(record => {
+      this.querySelector(`[identifier = "${record.id}"] [attribute = "${column}"]`).classList.add(classes);
+    }))
+  }
+
+
+  _addCellWrapper(wrapper) {
     this._cellWrapper = wrapper;
   }
 
-  _getRecord(e){
+  _getRecord(e) {
     e.detail.callback(this._records[e.target.index])
-}
+  }
 
   _retrieveTableColumnContainer() {
     this._tableColumnContainer = this.querySelector('table-columns');
@@ -78,6 +108,7 @@ export class CustomTable extends RecordListComponent {
     this._selectedRecordIndices = [];
     super.update(records, columns);
     super.render();
+    this._postRender.forEach(effect => effect());
     this._retrieveTableRows();
     this._renderCustomColumns();
   }
@@ -97,9 +128,9 @@ export class CustomTable extends RecordListComponent {
               ${this._records
         .map((record, index) => {
           return `
-                    <tr class='custom-table-row' id=${index}>
+                    <tr class='custom-table-row' id=${index} identifier="${record.id}">
                       ${this._features.select ? `<td><custom-check-box index=${index}></td>` : ''}
-                      ${this._getRecordAttributes(record).map(attribute => `<td>${this._cellWrapper ? `<${this._cellWrapper}>${attribute.data}</${this._cellWrapper}>` : `${attribute.data}`}</td>`).join('')}
+                      ${this._getRecordAttributes(record).map(attribute => `<td attribute="${attribute.name}">${this._cellWrapper ? `<${this._cellWrapper}>${attribute.data}</${this._cellWrapper}>` : `${attribute.data}`}</td>`).join('')}
                      
                     </tr>
                   `;
@@ -130,4 +161,116 @@ export class TableColumns extends HTMLElement {
 }
 
 customElements.define('table-columns', TableColumns);
+
+export class RowCount extends RecordListComponent {
+
+
+  update(records) {
+    super.update(records);
+    super.render();
+  }
+
+
+  get html() {
+    return `<p>${this._records.length} row(s) selected</p>`
+  }
+}
+
+customElements.define('row-count', RowCount);
+
+
+export class SelectAllRecords extends Component {
+
+  _eventListeners = [
+    { type: 'click', callback: this._onClick }
+  ]
+
+  _attributes = [
+    { attribute: 'target', type: 'text', callback: this._addTarget.bind(this) }
+  ]
+
+  connectedCallback() {
+    super.connectedCallback();
+    super.render();
+  }
+
+  _addTarget(target) {
+    this._target = document.getElementById(target);
+  }
+
+
+  _onClick(e) {
+    this._target.selectAllRecords();
+  }
+
+
+}
+
+export class SelectAllRecordsButton extends SelectAllRecords {
+  get html() {
+    return `<button type="button" class="${this._classes}">${this._name}</button>`
+  }
+}
+
+customElements.define('select-all-records-button', SelectAllRecordsButton);
+
+export class SelectAllRecordsCheckbox extends SelectAllRecords {
+
+  get html() {
+    return `<input type='checkbox' style="cursor:pointer"/>
+    <label for="${this._name}">
+    ${this._name}
+  </label>`
+  }
+
+  _onClick(e) {
+    this.querySelector('input').checked ? this._target.selectAllRecords() : this._target.selectNoRecords();;
+
+  }
+}
+
+customElements.define('select-all-records-checkbox', SelectAllRecordsCheckbox);
+export class ColumnSum extends RecordListComponent {
+
+  _column;
+
+  _attributes = [
+    { attribute: 'column', type: 'text', callback: this._addColumn.bind(this) }
+  ]
+
+  _addColumn(column) {
+    this._column = column;
+  }
+
+  update(records) {
+    super.update(records);
+    super.render();
+  }
+
+  get sum() {
+    return this._records.map(record => record.attributes.find(attribute => attribute.name === this._column).data).reduce((a, b) => a + b)
+  }
+
+  get html() {
+    return `<p>${this.sum}</p>`;
+  }
+
+}
+
+customElements.define('column-sum', ColumnSum);
+
+export class ColumnAverage extends ColumnSum {
+
+
+  get average() {
+    return super.sum / this._records.length;
+  }
+
+  get html() {
+    return `<p>${this.average}</p>`;
+  }
+
+}
+
+customElements.define('column-average', ColumnAverage);
 

@@ -1,21 +1,25 @@
 import { SingleRecordComponent } from "./component.js";
 import { Events } from "./events.js";
 
-class CustomAttributesTable extends SingleRecordComponent {
+export class CustomAttributesTable extends SingleRecordComponent {
 
   _inputFields = {};
+  _checkboxes = {};
 
   _inputFieldConfig = [];
 
+  
   _eventListeners = [
     { type: 'registerinput', callback: this._registerInput },
+    { type: 'registercheckbox', callback: this._registerCheckbox },
     { type: 'select', callback: this._selectAttribute }
   ]
 
   _config = {
     readonly: false,
     disable: false,
-    empty: false
+    empty: false,
+    novalues: false
   }
 
   _features = {
@@ -27,12 +31,27 @@ class CustomAttributesTable extends SingleRecordComponent {
     Events.invoke(this, 'register');
   }
 
+  checkAttributes(attributes){
+    attributes.forEach(attribute => this._checkboxes[attribute].check())
+  }
+
   _selectAttribute(e){
-    e.target.selected ? this._inputFields[e.target.data].enable() : this._inputFields[e.target.data].disable();
+    const column = e.target.data;
+    if(e.target.selected){
+      this._inputFields[column]?.enable();
+      Events.send(this, "selectcolumn", column);
+    } else {
+      this._inputFields[column]?.disable();
+      Events.send(this, "deselectcolumn", column);
+    }
   }
 
   _registerInput(e){
     this._inputFields[e.target.column] = e.target;
+  }
+
+  _registerCheckbox(e){
+    this._checkboxes[e.target.data] = e.target;
   }
 
   _getInputFieldConfig(attr){
@@ -66,13 +85,15 @@ class CustomAttributesTable extends SingleRecordComponent {
               return `
                 <tr>
                  ${this._features.select ? 
-                `<td>${attr.readonly ? "" : `<custom-check-box data='${attr.name}'></custom-check-box>`} </td>` : ""}
+                `<td>${attr.readonly && !this._config.novalues ? "" : `<custom-check-box data='${attr.name}'></custom-check-box>`} </td>` : ""}
                  <td>${attr.name}</td>
-                  ${
+                 ${this._config.novalues ? "" :
+                  `${
                     this._config.readonly
                       ? `<td>${attr.data}</td>`
                       : `<td><custom-input-field data='${attr.data}' column='${attr.name}' type=${attr.type} config='${this._getInputFieldConfig(attr)}'></custom-input-field></td>`
-                  }
+                  }`
+                }
                 </tr>
               `;
             })

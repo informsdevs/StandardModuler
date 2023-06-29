@@ -9,11 +9,20 @@ export class CustomCheckBox extends HTMLElement {
         this._index = this.getAttribute("index");
         this._data = this.getAttribute("data");
         this.addEventListener('click', this._onClick.bind(this))
+        Events.invoke(this, 'registercheckbox')
         this.innerHTML = this.html;
     }
 
     _onClick() {
         Events.invoke(this, 'select')
+    }
+
+    check(){
+        this.querySelector('input').checked = true;
+    }
+
+    uncheck(){
+        this.querySelector('input').checked = false;
     }
 
     get index() {

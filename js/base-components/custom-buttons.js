@@ -1,4 +1,4 @@
-import { RecordListComponent, SingleRecordComponent } from "./component.js";
+import { Component, RecordListComponent, SingleRecordComponent } from "./component.js";
 import { Events } from "./events.js";
 
 
@@ -130,6 +130,39 @@ export class TableButton extends SingleRecordComponent {
 }
 
 customElements.define('table-button', TableButton);
+
+export class SelectAllButton extends Component {
+
+    _eventListeners = [
+        { type: 'click', callback: this._onClick }
+    ]
+
+    _attributes = [
+        { attribute: 'target', type: 'text', callback: this._addTarget.bind(this) }
+    ]
+
+    connectedCallback(){
+        super.connectedCallback();
+        super.render();
+    }
+
+    _addTarget(target){
+        this._target = document.getElementById(target);
+    }
+
+
+    _onClick(e){
+        this._target.selectAllRecords();
+    }
+
+
+    get html() {
+        return `<button type="button" class="${this._classes}">${this._name}</button>`
+    }
+
+}
+
+customElements.define('select-all-button', SelectAllButton);
 export class ExportRecordsButton extends RecordListComponent {
 
     _eventListeners = [

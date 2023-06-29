@@ -1,5 +1,6 @@
 import { RecordListComponent, SingleRecordComponent } from "./component.js";
 import { Events } from "./events.js";
+import { CustomAttributesTable } from "./custom-attribute-table.js"
 
 export class CustomDialog extends RecordListComponent {
 
@@ -8,6 +9,8 @@ export class CustomDialog extends RecordListComponent {
     _bodyContent;
     _footerContent;
     _body;
+    _columnTarget;
+    _selectedColumns = new Set();
    
 
     _eventListeners = [
@@ -17,7 +20,14 @@ export class CustomDialog extends RecordListComponent {
         { type: 'batchedit', callback: this._batchEdit },
         { type: 'edit', callback: this._edit },
         { type: 'addrecord', callback: this._addRecord },
-        { type: 'register', callback: this._registerChild }
+        { type: 'register', callback: this._registerChild },
+        { type: 'selectcolumn', callback: this._selectColumn },
+        { type: 'deselectcolumn', callback: this._deselectColumn },
+        { type: 'definecolumns',  callback: this._defineColumns}
+    ]
+
+    _attributes = [
+        { attribute: 'column-target', type: 'text', callback: this._addColumnTarget.bind(this) },
     ]
 
  
@@ -29,6 +39,12 @@ export class CustomDialog extends RecordListComponent {
              this._applyElements();
              this._modal = new bootstrap.Modal(this.querySelector('.modal'));
         });
+    }
+
+    _addColumnTarget(target){
+        document.addEventListener("DOMContentLoaded", () => {
+            this._columnTarget = document.getElementById(target);
+        })
     }
 
     _updateEventRecords(e) {
@@ -59,6 +75,19 @@ export class CustomDialog extends RecordListComponent {
         this._modal.hide();
     }
 
+    _selectColumn(e){
+        this._selectedColumns.add(e.detail);
+    }
+
+    _deselectColumn(e){
+        this._selectedColumns.delete(e.detail);
+    }
+
+    _defineColumns(e){
+        this._columnTarget.defineColumns([...this._selectedColumns]);
+        this._modal.hide();
+    }
+
     _registerChild(e){
         this._body = e.target;
     }
@@ -76,8 +105,9 @@ export class CustomDialog extends RecordListComponent {
     }
 
     update(records, columns) {
-        super.update(records);
+        super.update(records);      
         this._body instanceof SingleRecordComponent ? this._body.update(records[0], columns) : this._body.update(records, columns)
+        if (this._body instanceof CustomAttributesTable) this._body.checkAttributes([...this._selectedColumns])
         this._modal.show();
     }
 

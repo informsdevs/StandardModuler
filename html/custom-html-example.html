@@ -39,27 +39,43 @@
         <import-records-button id="import-records"></import-records-button>
         <export-records-button listen="table"></export-records-button>
 
-        <search-container id="search" listen="data-handler">
-           <search-field column="Name"></search-field>
-            <search-radio-button name="None" column="Client" config='["noFilter"]'></search-radio-button>
-            <search-radio-button name="ABC Company" column="Client"></search-radio-button>
-            <search-radio-button name="Apple Inc." column="Client"></search-radio-button>
-        </search-container>
+        <auto-populated-search-container id="search" listen="data-handler">
+
+        </auto-populated-search-container>
+
+     
 
         <custom-button id='delete-button' name="Delete" listen="table"></custom-button>
         <custom-button id="batch-edit-button" name="Edit" listen="table"></custom-button>
         <custom-button id="create-button" name="Add" listen="data-handler"></custom-button>
+        <custom-button id="define-columns" name="Select Columns" listen="data-handler"></custom-button>
         <custom-button name="View"></custom-button>
 
+        <select-all-records-checkbox name="Select All" target="table"></select-all-records-checkbox>
+
   
-        <custom-table id='table' features='["select"]' wrap-cells="label" listen="search" class="table-dark"
-        column-select='["Name", "Client", "Country"]'>
+        <custom-table id='table' features='["select"]' wrap-cells="label" listen="search" conditional-class='["Academy", "greater-than", 90, "table-dark"]'
+        column-select='["Name", "Academy", "Challenge"]'>
             <table-columns name="Actions">
-                <table-button name="Delete" target="delete-dialog"></table-button>
-                <table-button name="View" target="view-dialog"></table-button>
-            <table-button name="Edit" target="edit-dialog"></table-button>   
-            </table-columns>
+                    <table-button name="View" target="view-dialog" :class="btn btn-secondary"></table-button>
+            <table-button name="Edit" target="edit-dialog" :class="btn btn-secondary"></table-button>   
+            <table-button name="Delete" target="delete-dialog" :class="btn btn-danger"></table-button>    
+        </table-columns>
         </custom-table>
+
+        <row-count listen="table"></row-count>
+        <column-average listen="data-handler" column="Total"></column-average>
+
+
+        <custom-dialog id='column-select-dialog' listen="define-columns" column-target="search">
+            <dialog-title>Select Columns</dialog-title>
+            <dialog-body>
+                <custom-attribute-table features='["select"]' config='["novalues"]'></custom-attribute-table>
+            </dialog-body>
+            <dialog-footer>
+                <dialog-accept-button name='Ok' event="definecolumns"></dialog-accept-button>
+            </dialog-footer>
+        </custom-dialog>
 
         <custom-dialog id='view-dialog'>
             <dialog-title>View Record</dialog-title>

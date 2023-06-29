@@ -11,8 +11,9 @@ import * as hanlderImpl from './concrete-adoptations/default-data-handler.js'
 import * as attributesTable from './base-components/custom-attribute-table.js'
 import * as inputField from './base-components/custom-input-field.js'
 import * as grid from './base-components/custom-grid.js'
+import * as mathConditions from './misc/math-conditions.js'
 
-//resetData();
+resetData();
 async function resetData(){
     const apiClient = platformccApiClient();
     await apiClient.resetTestData();
