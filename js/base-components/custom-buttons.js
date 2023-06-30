@@ -254,7 +254,6 @@ export class ImportRecordsButton extends RecordListComponent {
     }
 
     _onChange(e) {
-
         const file = e.target.files[0];
 
         if (file) {

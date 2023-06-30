@@ -56,13 +56,13 @@ export class CustomTable extends RecordListComponent {
 
   _addConditionalClass(options) {
     const column = options[0], condition = options[1], value = options[2], classes = options[3];
-    this._postRender.push(() => 
-    this._records.filter(record => {
-      const attribute = record.attributes.find(attr => attr.name === column)
-      return MathConditions[condition](attribute.data, value);
-    }).forEach(record => {
-      this.querySelector(`[identifier = "${record.id}"] [attribute = "${column}"]`).classList.add(classes);
-    }))
+    this._postRender.push(() =>
+      this._records.filter(record => {
+        const attribute = record.attributes.find(attr => attr.name === column)
+        return MathConditions[condition](attribute.data, value);
+      }).forEach(record => {
+        this.querySelector(`[identifier = "${record.id}"] [attribute = "${column}"]`).classList.add(classes);
+      }))
   }
 
 

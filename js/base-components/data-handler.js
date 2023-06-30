@@ -1,7 +1,5 @@
 import { RecordListComponent } from './component.js';
 import * as clients from '../api-clients.js'
-
-
 export class DataHandler extends RecordListComponent {
 
     _dataArray;
@@ -51,7 +49,7 @@ export class DataHandler extends RecordListComponent {
         return dataArray.map(item => {
             const record = { attributes: [], id: item[this._identifier] };
             this.columns.forEach(prop => {
-                const data = prop.type === 'number' ? parseInt(item[prop[key]]) : item[prop[key]]
+                const data = prop.type === 'number' ? parseInt(item[prop[key]]) || 0 : item[prop[key]]
                 record.attributes.push({ "data": data, ...prop })
             })
             return record;
@@ -162,8 +160,14 @@ export class DataHandler extends RecordListComponent {
     }
 
     async _sendAll(e) {
-        const records = this._mapRecordsToApiRecord(e.detail.records);
-        await this._apiClient.createNewRecords(records);
+        const key = e.detail.key;
+        const keys = this._dataArray.map(data => data[this._getProp(key).key]);
+        const records = e.detail.records.filter(record => {
+           const attr = record.attributes.find(attribute => attribute.name === key).data
+           return !keys.includes(attr);
+        })
+        const apiRecords = this._mapRecordsToApiRecord(records);
+        await this._apiClient.createNewRecords(apiRecords);
         this._update();
     }
 

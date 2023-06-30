@@ -9,12 +9,13 @@ export class CustomDialog extends RecordListComponent {
     _bodyContent;
     _footerContent;
     _body;
+    _key;
     _columnTarget;
     _selectedColumns = new Set();
    
 
     _eventListeners = [
-        { type: 'sendall', callback: this._updateEventRecords },
+        { type: 'sendall', callback: this._sendAll },
         { type: 'deleterecords', callback: this._updateEventRecords },
         { type: 'deleterecord', callback: this._updateEventRecord },
         { type: 'batchedit', callback: this._batchEdit },
@@ -28,6 +29,7 @@ export class CustomDialog extends RecordListComponent {
 
     _attributes = [
         { attribute: 'column-target', type: 'text', callback: this._addColumnTarget.bind(this) },
+        { attribute: 'key', type: 'text', callback: this._addKey.bind(this) }
     ]
 
  
@@ -47,6 +49,10 @@ export class CustomDialog extends RecordListComponent {
         })
     }
 
+    _addKey(key){
+        this._key = key;
+    }
+
     _updateEventRecords(e) {
         e.detail.records = this._records;
         this._modal.hide();
@@ -54,6 +60,12 @@ export class CustomDialog extends RecordListComponent {
 
     _updateEventRecord(e){
         e.detail.record = this._records[0];
+        this._modal.hide();
+    }
+
+    _sendAll(e){
+        e.detail.records = this._records;
+        e.detail.key = this._key;
         this._modal.hide();
     }
 

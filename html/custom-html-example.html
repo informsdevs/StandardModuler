@@ -67,7 +67,17 @@
         <column-average listen="data-handler" column="Total"></column-average>
 
 
-        <custom-dialog id='column-select-dialog' listen="define-columns" column-target="search">
+        <custom-dialog listen="define-columns-table" column-target="table">
+            <dialog-title>Select Columns</dialog-title>
+            <dialog-body>
+                <custom-attribute-table features='["select"]' config='["novalues"]'></custom-attribute-table>
+            </dialog-body>
+            <dialog-footer>
+                <dialog-accept-button name='Ok' event="definecolumns"></dialog-accept-button>
+            </dialog-footer>
+        </custom-dialog>
+
+        <custom-dialog listen="define-columns" column-target="search">
             <dialog-title>Select Columns</dialog-title>
             <dialog-body>
                 <custom-attribute-table features='["select"]' config='["novalues"]'></custom-attribute-table>
@@ -136,7 +146,7 @@
             </dialog-footer>
         </custom-dialog>
 
-        <custom-dialog id="import-dialog" listen="import-records">
+        <custom-dialog id="import-dialog" key="Name" listen="import-records">
             <dialog-title>Import records</dialog-title>
             <dialog-body>
                 <custom-table listen="import-records"></custom-table>
