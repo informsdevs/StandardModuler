@@ -26,7 +26,8 @@ export class DataHandler extends RecordListComponent {
         { attribute: 'prop-types', type: 'json', callback: this._setPropertyTypes.bind(this) },
         { attribute: 'prop-sum', type: 'json', callback: this._addSumProperty.bind(this) },
         { attribute: 'identifier', type: 'text', callback: this._addIdentifier.bind(this) },
-        { attribute: 'prop-initials', type: 'json', callback: this._addInitialsColumn.bind(this) }
+        { attribute: 'prop-initials', type: 'json', callback: this._addInitialsColumn.bind(this) },
+        { attribute: 'prop-order', type: 'json', callback: this._addPropOrder.bind(this) }
     ]
 
     constructor() {
@@ -72,6 +73,14 @@ export class DataHandler extends RecordListComponent {
         }))
         this._addProp(initialsColumn, initialsColumn, "text", true);
         return this;    
+      }
+
+      _addPropOrder(sortingArr){
+        this._properties.sort((a, b) => {
+            const aIndex = sortingArr.indexOf(a.name);
+            const bIndex = sortingArr.indexOf(b.name);
+            return aIndex - bIndex;
+          });
       }
 
 
@@ -208,12 +217,13 @@ export class DataHandler extends RecordListComponent {
 }
 
 class Property {
-    constructor(key, name, type, readonly) {
+    constructor(key, name, type, readonly, order) {
         this.key = key;
         this.name = name;
         this.type = type;
         this.readonly = readonly;
-        this.selected = true
+        this.selected = true;
+        
     }
 }
 

@@ -274,9 +274,12 @@ export function platformccApiClient() {
   function generateTestData() {
     const records = testData.map((record) => {
       const updatedRecord = {};
-      Object.values(record).forEach((value, index) => {
-        const updatedKey = `attribute_${index + 1}`;
-        updatedRecord[updatedKey] = value;
+      Object.entries(record).forEach(([key, value], index) => {
+        if(key === "firstname" || key === "lastname" || key === "email"){
+          updatedRecord[key] = value;
+        } else {
+          updatedRecord[`attribute_${index - 2}`] = value;
+        }        
       });
       return updatedRecord;
     });
@@ -354,7 +357,9 @@ function mockApiClient() {
 }
 
 let testData = [
-  {
+  { "firstname" : "John",
+     "lastname" : "Doe",
+     "email" : "john.doe@example.com",
     "Employee_ID": 9876543,
     "name": "John Doe",
     "client": "ABC Company",
@@ -366,6 +371,9 @@ let testData = [
     "manual_points": 8
   },
   {
+    "firstname" : "Emma",
+     "lastname" : "Johnson",
+     "email" : "emma.johnson@example.com",
     "Employee_ID": 1257312,
     "name": "Emma Johnson",
     "client": "Apple Inc.",
@@ -377,6 +385,9 @@ let testData = [
     "manual_points": 5
   },
   {
+    "firstname" : "Sophie",
+     "lastname" : "Anderson",
+     "email" : "sophie.anderson@example.com",
     "Employee_ID": 9872365,
     "name": "Sophie Anderson",
     "client": "Microsoft Corporation",
@@ -388,6 +399,9 @@ let testData = [
     "manual_points": 2
   },
   {
+    "firstname" : "Juan",
+    "lastname" : "Rodriguez",
+    "email" : "juan.rodriguez@example.com",
     "Employee_ID": 4568219,
     "name": "Juan Rodriguez",
     "client": "Google LLC",
@@ -399,6 +413,9 @@ let testData = [
     "manual_points": 0
   },
   {
+    "firstname" : "Li",
+    "lastname" : "Wei",
+    "email" : "li.wei@example.com",
     "Employee_ID": 7125489,
     "name": "Li Wei",
     "client": "Amazon.com, Inc.",

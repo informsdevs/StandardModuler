@@ -58,21 +58,18 @@ export class AutoPopulatedSearchContainer extends SearchContainer {
 
 customElements.define('auto-populated-search-container', AutoPopulatedSearchContainer);
 
-export class SearchField extends HTMLElement {
+export class SearchField extends RecordListComponent {
 
     _column;
 
-    _initializers = [
-        { attribute: 'column', callback: this._selectColumn.bind(this) }]
+    _attributes = [
+        { attribute: 'column', type: 'text', callback: this._selectColumn.bind(this) }
+    ]
 
 
     connectedCallback() {
-        this._initializers.forEach(initializer => {
-            if (this.getAttribute(initializer.attribute)) {
-                initializer.callback(this.getAttribute(initializer.attribute))
-            }
-        })
-        this.innerHTML = this.html;
+        super.connectedCallback();
+        super.render();
         Events.invoke(this, 'register')
     }
 
@@ -150,18 +147,31 @@ export class SearchRadioGroup extends SearchGroup {
 
 
     _onClick(e){
-        this._searchPhrase = e.target.getAttribute(":name");
+        this._searchPhrase = e.target.checked ? e.target.getAttribute(":name") : "";
     }
 
     get searchPhrase(){
         return this._searchPhrase ?? "";
     }
 
-    get html(){
-        return `${this._items.map(item => `<search-radio-button name="${item}"></search-radio-button>`).join('')}`
+     get html(){
+        return `<search-radio-button config='["noFilter"]' name="All"></search-radio-button>
+        ${this._items.map(item => `<search-radio-button name="${item}"></search-radio-button>`).join('')}`
+    } 
+
+/*     get html() {
+        return `
+          <div class="form-check col-12 filterbuttons">
+            ${this._items.map((item, index) => `
+              <input type="checkbox" class="btn-check visually-hidden button-item" id="checkbox-${index}" value="${item}" autocomplete="off">
+              <label class="btn btn-primary w-100" for="checkbox-${index}">${item}</label>
+            `).join('')}
+          </div>`;
+      } */
+      
     }
 
-}
+
 
 customElements.define('search-radio-group', SearchRadioGroup);
 export class SearchRadioButton extends Component {
@@ -176,14 +186,26 @@ export class SearchRadioButton extends Component {
         super.connectedCallback();
         super.render();
     }
-   
 
+    get checked(){
+        return this.querySelector('intput').checked;
+    }
+
+    get html() {
+        return `
+          <div class="form-check col-12 filterbuttons">
+              <input type="checkbox" :name="${this._config.noFilter ? "" : this._name}" class="btn-check visually-hidden button-item" id="checkbox-${this._id}" value="${this._name}" autocomplete="off">
+              <label class="btn btn-primary w-100" for="checkbox-${this._id}">${this._name}</label>
+           </div> `;
+      }
+   
+/* 
     get html(){
         return ` <div class="form-check ${this._classes}">
         <input class="form-check-input" :name="${this._name}" type="radio" name="radio" id="radio-${this._id}">
         <label class="form-check-label" for="radio-${this._id}">${this._name}</label>
       </div>`
-    }
+    } */
 
 }
 
@@ -196,8 +218,10 @@ export class SearchDropDown extends SearchGroup {
         { type: 'click', callback: this._onClick }
     ]
 
+
     _onClick(e){
         this._searhPhrase = e.target.name;
+        this.querySelector('button').innerText = e.target.innerText;
     }
 
     get searchPhrase(){
@@ -211,6 +235,7 @@ export class SearchDropDown extends SearchGroup {
           ${this._name}
         </button>
         <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+        <a class="dropdown-item" name="" href="#">All</a>
         ${this._items.map(item => `<a class="dropdown-item" name="${item}" href="#">${item}</a>`).join('')}
         </div>
       </div>`

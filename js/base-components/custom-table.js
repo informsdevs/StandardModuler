@@ -4,7 +4,7 @@ import { MathConditions } from "../misc/math-conditions.js";
 
 export class CustomTable extends RecordListComponent {
 
-  _selectedRecordIndices = []
+  _selectedRecords = new Set();
   _tableRows = [];
   _tableColumns = [];
   _postRender = [];
@@ -12,7 +12,8 @@ export class CustomTable extends RecordListComponent {
   _cellWrapper;
 
   _features = {
-    select: false
+    select: false,
+    clicksort: false
   }
 
   _eventListeners = [
@@ -43,13 +44,13 @@ export class CustomTable extends RecordListComponent {
   }
 
   selectAllRecords() {
-    this._selectedRecordIndices = Array.from(Array(this._records.length).keys());
+    this._selectedRecords = new Set(this._records.map(record => record.id));
     this.querySelectorAll('custom-check-box').forEach(checkbox => checkbox.check());
     this._updateWatchers(this._records, this._columns);
   }
 
   selectNoRecords() {
-    this._selectedRecordIndices = [];
+    this._selectedRecords = new Set();
     this.querySelectorAll('custom-check-box').forEach(checkbox => checkbox.uncheck())
     this._updateWatchers([], this._columns)
   }
@@ -61,7 +62,7 @@ export class CustomTable extends RecordListComponent {
         const attribute = record.attributes.find(attr => attr.name === column)
         return MathConditions[condition](attribute.data, value);
       }).forEach(record => {
-        this.querySelector(`[identifier = "${record.id}"] [attribute = "${column}"]`).classList.add(classes);
+        this.querySelector(`[data-recordid = "${record.id}"] [data-attribute = "${column}"]`).classList.add(classes);
       }))
   }
 
@@ -86,6 +87,12 @@ export class CustomTable extends RecordListComponent {
     this._tableRows = [...this.querySelectorAll(".custom-table-row")]
   }
 
+  _updateSelectedRecords(){
+    const test = this._records.filter(record => this._selectedRecords.has(record.id));
+    this._records.filter(record => this._selectedRecords.has(record.id))
+    .forEach(record => this.querySelector(`custom-check-box[data-recordid = "${record.id}"]`).check())
+  }
+
   _renderCustomColumns() {
     this._tableRows.forEach((row, index) => {
       this._tableColumns.forEach(column => {
@@ -98,16 +105,16 @@ export class CustomTable extends RecordListComponent {
     })
   }
 
-
   _selectRecord(e) {
-    e.target.selected ? this._selectedRecordIndices.push([e.target.index]) : this._selectedRecordIndices.splice(this._selectedRecordIndices.indexOf(e.target.index), 1)
-    this._updateWatchers(this._selectedRecordIndices.map(index => this._records[index]), this._columns)
+    e.target.selected ? this._selectedRecords.add(parseInt(e.target.dataset.recordid)) : this._selectedRecords.delete(parseInt(e.target.dataset.recordid));
+    this._updateWatchers([...this._selectedRecords].map(id => this._records.find(record => id === record.id)), this._columns)
   }
 
   update(records, columns) {
-    this._selectedRecordIndices = [];
     super.update(records, columns);
     super.render();
+    this._selectedRecords = new Set();
+    this._updateWatchers([], columns);
     this._postRender.forEach(effect => effect());
     this._retrieveTableRows();
     this._renderCustomColumns();
@@ -120,7 +127,7 @@ export class CustomTable extends RecordListComponent {
             <thead>
               <tr>
                 ${this._features.select ? `<th scope='col'>Select</th>` : ''}
-                ${this.columns.map(column => `<th class="column" scope="col">${column.name}</th>`).join('')}
+                ${this.columns.map(column => `<th class="column " scope="col">${column.name}</th>`).join('')}
                 ${this._tableColumns.length > 0 ? `<th scope='col' colspan="${this._tableColumns.length}">${this._tableColumnContainer.name}</th>` : ""} 
               </tr>
             </thead>
@@ -128,9 +135,9 @@ export class CustomTable extends RecordListComponent {
               ${this._records
         .map((record, index) => {
           return `
-                    <tr class='custom-table-row' id=${index} identifier="${record.id}">
-                      ${this._features.select ? `<td><custom-check-box index=${index}></td>` : ''}
-                      ${this._getRecordAttributes(record).map(attribute => `<td attribute="${attribute.name}">${this._cellWrapper ? `<${this._cellWrapper}>${attribute.data}</${this._cellWrapper}>` : `${attribute.data}`}</td>`).join('')}
+                    <tr class='custom-table-row' id=${index} data-recordid="${record.id}">
+                      ${this._features.select ? `<td><custom-check-box data-recordid="${record.id}"></td>` : ''}
+                      ${this._getRecordAttributes(record).map(attribute => `<td data-attribute="${attribute.name}">${this._cellWrapper ? `<${this._cellWrapper}>${attribute.data}</${this._cellWrapper}>` : `${attribute.data}`}</td>`).join('')}
                      
                     </tr>
                   `;
@@ -206,6 +213,33 @@ export class SelectAllRecords extends Component {
 
 }
 
+export class ClearAllRecords extends Component {
+
+  _eventListeners = [
+    { type: 'click', callback: this._onClick }
+  ]
+
+  _attributes = [
+    { attribute: 'target', type: 'text', callback: this._addTarget.bind(this) }
+  ]
+
+  connectedCallback() {
+    super.connectedCallback();
+    super.render();
+  }
+
+  _addTarget(target) {
+    this._target = document.getElementById(target);
+  }
+
+
+  _onClick(e) {
+    this._target.selectNoRecords();
+  }
+
+
+}
+
 export class SelectAllRecordsButton extends SelectAllRecords {
   get html() {
     return `<button type="button" class="${this._classes}">${this._name}</button>`
@@ -213,6 +247,14 @@ export class SelectAllRecordsButton extends SelectAllRecords {
 }
 
 customElements.define('select-all-records-button', SelectAllRecordsButton);
+
+export class ClearAllRecordsButton extends ClearAllRecords {
+  get html() {
+    return `<button type="button" class="${this._classes}">${this._name}</button>`
+  }
+}
+
+customElements.define('clear-all-records-button', ClearAllRecordsButton);
 
 export class SelectAllRecordsCheckbox extends SelectAllRecords {
 
@@ -230,6 +272,9 @@ export class SelectAllRecordsCheckbox extends SelectAllRecords {
 }
 
 customElements.define('select-all-records-checkbox', SelectAllRecordsCheckbox);
+
+
+
 export class ColumnSum extends RecordListComponent {
 
   _column;

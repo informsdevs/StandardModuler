@@ -21,17 +21,30 @@
 
 <body>
 
+
     <data-handler id="data-handler" identifier="tid"
         prop-names='[["firstname", "First Name"], ["lastname", "Last Name"], ["email", "Email"], ["attribute_5", "Retailer"], ["attribute_6", "Store"]]'
-        prop-select='["First Name", "Last Name", "Email", "Retailer", "Store"]'>
+        prop-select='["First Name", "Last Name", "Email", "Retailer", "Store"]'
+        prop-initials='[["First Name", "Last Name"], "#"]'
+        prop-order='["#", "First Name", "Last Name", "Email", "Retailer", "Store"]'>
 
-        <auto-populated-search-container id="search" listen="data-handler">
-        </auto-populated-search-container>
+        <div id="userstats" class="statstop white top comptact">
+            <h3>Get going with our Active users</h3>
+            <custom-stats name="Active users" listen="data-handler"></custom-stats>
+        </div>
+        <search-container id="search" listen="data-handler">
+            <search-radio-group column="First Name" items='["Sophie", "Emma", "Li"]'></search-radio-group>
+            <search-drop-down column="Retailer" name="Retailer" items='["Currys PC World", "Best Buy", "JD.com"]'></search-drop-down>
+        </search-container>
 
         <custom-button id="create-button" name="Add new contact" listen="data-handler"></custom-button>
-        <custom-button id="define-columns" name="Select filters" listen="data-handler"></custom-button>
-
+       
         <custom-table id='table' features='["select"]' wrap-cells="label" listen="search">
+            <table-columns name="Actions">
+            <table-button name="View" target="view-dialog" :class="btn btn-secondary"></table-button>
+            <table-button name="Edit" target="edit-dialog" :class="btn btn-secondary"></table-button>
+            <table-button name="Delete" target="delete-dialog" :class="btn btn-danger"></table-button>
+            </table-columns>
         </custom-table>
 
         <toggle-container listen="table" class="d-flex">
@@ -84,6 +97,34 @@
             </dialog-body>
             <dialog-footer>
                 <dialog-accept-button name='Confirm' event="deleterecords"></dialog-accept-button>
+            </dialog-footer>
+        </custom-dialog>
+
+        <custom-dialog id='view-dialog'>
+            <dialog-title>View Record</dialog-title>
+            <dialog-body>
+                <custom-attribute-table config='["readonly"]'></custom-attribute-table>
+            </dialog-body>
+            <dialog-footer></dialog-footer>
+        </custom-dialog>
+
+        <custom-dialog id='delete-dialog'>
+            <dialog-title>Delete Record</dialog-title>
+            <dialog-body>
+                <dialog-delete-body info='Last Name'></dialog-delete-body>
+            </dialog-body>
+            <dialog-footer>
+                <dialog-accept-button name='Confirm' event="deleterecord"></dialog-accept-button>
+            </dialog-footer>
+        </custom-dialog>
+
+        <custom-dialog id='edit-dialog'>
+            <dialog-title>Edit Record</dialog-title>
+            <dialog-body>
+                <custom-attribute-table></custom-attribute-table>
+            </dialog-body>
+            <dialog-footer>
+                <dialog-accept-button name='Save' event="edit"></dialog-accept-button>
             </dialog-footer>
         </custom-dialog>
 

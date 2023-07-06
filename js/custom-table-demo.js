@@ -12,8 +12,10 @@ import * as attributesTable from './base-components/custom-attribute-table.js'
 import * as inputField from './base-components/custom-input-field.js'
 import * as grid from './base-components/custom-grid.js'
 import * as mathConditions from './misc/math-conditions.js'
+import * as toggle from './base-components/toggle-container.js'
+import * as stats from './concrete-adoptations/custom-stats.js'
 
-resetData();
+//resetData();
 async function resetData(){
     const apiClient = platformccApiClient();
     await apiClient.resetTestData();
